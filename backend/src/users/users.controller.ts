@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -6,6 +14,29 @@ import { UpdateUserDto } from './dto/update-user.dto';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Post('init')
+  createMock() {
+    return this.usersService.createMockUser();
+  }
+
+  @Post('buy')
+  buyStock(
+    @Body()
+    body: {
+      userId: number;
+      symbol: string;
+      quantity: number;
+      price: number;
+    },
+  ) {
+    return this.usersService.buyStock(
+      body.userId,
+      body.symbol,
+      body.quantity,
+      body.price,
+    );
+  }
 
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
