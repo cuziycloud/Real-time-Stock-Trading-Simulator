@@ -1,0 +1,2 @@
+import {}
+export class Stock {}
