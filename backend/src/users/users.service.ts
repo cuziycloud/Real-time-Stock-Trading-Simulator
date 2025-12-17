@@ -69,16 +69,22 @@ export class UsersService {
     };
   }
 
+  async findOne(id: number) { //tra ve balance + por hien co
+    const user = await this.userRepository.findOne({
+      where: { id: id },
+      relations: ['portfolio'],
+    });
+    if (!user) throw new BadRequestException('User khong ton tai');
+
+    return user;
+  }
+
   create(createUserDto: CreateUserDto) {
     return 'This action adds a new user';
   }
 
   findAll() {
     return `This action returns all users`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
   }
 
   update(id: number, updateUserDto: UpdateUserDto) {

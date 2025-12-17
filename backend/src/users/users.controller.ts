@@ -50,7 +50,7 @@ export class UsersController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+    return this.usersService.findOne(+id); // Dau + de chuyen chuoi (string) 1 thanh number (1)
   }
 
   @Patch(':id')

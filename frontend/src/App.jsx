@@ -9,9 +9,14 @@ import {
   InputNumber,
   message,
   Button,
+  Drawer,
+  Statistic,
+  Row,
+  Col,
 } from "antd";
 import axios from "axios";
 import {
+  WalletOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
   DesktopOutlined,
@@ -24,6 +29,27 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false); //Bien kiem soat popup mua hang
   const [selectedStock, setSelectedStock] = useState(null); //Bien luu xem ng dung dang dinh mua ma nao
   const [buyQuantity, setBuyQuantity] = useState(100); //Bien luu so luong ma ng dung muon mua (mac dinh 100)
+  const [userInfo, setUserInfo] = useState(null); //Tien va danh muc co phieu
+  const [isDrawerOpen, SetIsDrawerOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(false); //Chay lai useEffect - fetchUserInfo
+
+  useEffect(() => {
+    let isMounted = true; //Co ktra component con song ko
+
+    const fetchUserInfo = async() => {
+      try {
+        const res = await axios.get("http://localhost:3000/users/1");
+        if(isMounted) { //Chi set state khi component con
+          setUserInfo(res.data);
+        }
+      } catch (error) {
+        console.error("Loi khong tim thay user", error);
+      }
+    }
+    fetchUserInfo();
+
+    return () => {isMounted = false};
+  },[refreshKey]);
 
   const showBuyModal = (stockRecord) => {
     setSelectedStock(stockRecord);
@@ -36,7 +62,7 @@ function App() {
 
     try {
       const respone = await axios.post("http://localhost:3000/users/buy", {
-        userId: 2,
+        userId: 1,
         symbol: selectedStock.symbol,
         quantity: buyQuantity,
         price: selectedStock.price,
@@ -47,6 +73,7 @@ function App() {
       );
 
       setIsModalOpen(false);
+      setRefreshKey(prev => !prev);
     } catch (error) {
       message.error(
         `That bai: ${error.respone?.data?.message || "Loi he thong"}`
@@ -125,6 +152,48 @@ function App() {
     },
   ];
 
+  //Logic tinh toan danh muc
+  //Portfolio lay tu API chi co gia von. Can map voi gtt (stocks) de tinh lai lo
+  const portfolioData = userInfo?.portfolio?.map((item) => {
+    // 1. Tim gia hien tai cua ma nay trong stocks (Real-time)
+    const currentStock = stocks.find((s) => s.symbol === item.symbol);
+    const marketPrice = currentStock? currentStock.price: item.avgPrice;
+
+    // 2. Tinh lai lo: (Gia hien tai - Gia von)* SL
+    const profit = (marketPrice - item.avgPrice)*item.quantity;
+    const profitPercent = ((marketPrice-item.avgPrice)/item.avgPrice)*100;
+
+    return {
+      ...item,
+      marketPrice,
+      profit,
+      profitPercent
+    };
+  })
+
+  const portfolioColumns = [
+    {title: 'Ma', dataIndex: 'symbol', key: 'symbol', render: t => <Tag color="orange">{t}</Tag>},
+    {title: 'So luong', dataIndex: 'quantity', key: 'quantity'},
+    {title: 'Gia von', dataIndex: 'avgPrice', key: 'avgPrice', render: p => Number(p).toLocaleString()},
+    {
+      title: 'Gia TT',
+      dataIndex: 'marketPrice',
+      key: 'marketPrice',
+      render: (p) => <Text strong>{p.toLocaleString()}</Text>
+    },
+    {
+      title: 'Lai/ Lo',
+      key: 'profit',
+      render: (_, record) => {
+        const color = record.profit >= 0? 'green' : 'red';
+        return(
+          <span style={{color, fontWeight: 'bold'}}>
+            {record.profit.toLocaleString()} ({record.profitPercent.toFixed(2)}%)
+          </span>
+        )
+      }
+    },
+  ];
   return (
     <div style={{ padding: "50px", background: "#f0f2f5", minHeight: "100vh" }}>
       <Card
@@ -135,6 +204,23 @@ function App() {
           boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
         }}
       >
+        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 20}}>
+          <Statistic
+            title = "So du kha dung"
+            value={userInfo?.balance}
+            precision={0}
+            suffix= "VND"
+            style={{color: '#3f8600', fontSize: 18}}
+          />
+          <Button
+            type="primary"
+            icon={<WalletOutlined/>}
+            onClick={() => SetIsDrawerOpen(true)}
+            size="large"
+          >
+            Xem Danh Muc Cua Toi
+          </Button>
+        </div>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <Title level={2} style={{ color: "#1890ff" }}>
             <DesktopOutlined /> Sàn chứng khoán Real-time
@@ -181,6 +267,20 @@ function App() {
             </p>
           </div>
         </Modal>
+        <Drawer
+          title = "Danh Mục Đầu Tư (My Portfolio)"
+          placement="right"
+          size={600}
+          onClose={() => SetIsDrawerOpen(false)}
+          open={isDrawerOpen}
+        >
+          <Table
+            dataSource={portfolioData}
+            columns={portfolioColumns}
+            rowKey="id"
+            pagination={false}
+          />
+        </Drawer>
       </Card>
     </div>
   );
