@@ -6,11 +6,14 @@ import {
   Patch,
   Param,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { TradeStockDto } from './dto/trade-stock.dto';
+import { AuthGuard } from '@nestjs/passport';
+import type { AuthenticatedUser } from 'src/auth/interfaces/authenticated-user.interface';
+import { GetUser } from 'src/auth/get-user.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -21,14 +24,22 @@ export class UsersController {
     return this.usersService.createMockUser();
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Post('buy')
-  buyStock(@Body() tradeDto: TradeStockDto) {
-    return this.usersService.buyStock(tradeDto);
+  buyStock(
+    @Body() tradeDto: TradeStockDto,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    return this.usersService.buyStock(user.id, tradeDto);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Post('sell')
-  sellStock(@Body() tradeDto: TradeStockDto) {
-    return this.usersService.sellStock(tradeDto);
+  sellStock(
+    @Body() tradeDto: TradeStockDto,
+    @GetUser() user: AuthenticatedUser,
+  ) {
+    return this.usersService.sellStock(user.id, tradeDto);
   }
 
   @Get(':id/history')

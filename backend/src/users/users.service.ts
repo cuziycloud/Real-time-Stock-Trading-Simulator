@@ -27,8 +27,8 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
-  async buyStock(dto: TradeStockDto) {
-    const { userId, symbol, quantity, price } = dto;
+  async buyStock(userId: number, dto: TradeStockDto) {
+    const { symbol, quantity, price } = dto;
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['portfolio'],
@@ -94,8 +94,8 @@ export class UsersService {
     return this.userRepository.findOne({ where: { email } });
   }
 
-  async sellStock(dto: TradeStockDto) {
-    const { userId, symbol, quantity, price } = dto;
+  async sellStock(userId: number, dto: TradeStockDto) {
+    const { symbol, quantity, price } = dto;
 
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -132,7 +132,7 @@ export class UsersService {
     if (remainingQuantity === 0) {
       await this.portfolioRepository.remove(portfolioItem);
     } else {
-      portfolioItem.quantity -= remainingQuantity;
+      portfolioItem.quantity = remainingQuantity;
       await this.portfolioRepository.save(portfolioItem);
     }
 
