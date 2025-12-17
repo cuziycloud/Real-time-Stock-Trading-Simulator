@@ -13,14 +13,24 @@ import {
   Statistic,
   Row,
   Col,
+  Layout,
+  Avatar,
+  Space,
+  Alert,
+  Divider,
 } from "antd";
 import axios from "axios";
 import {
+  UserOutlined,
+  StockOutlined,
   WalletOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
   DesktopOutlined,
+  HistoryOutlined,
+  ThunderboltFilled,
 } from "@ant-design/icons";
+import { Content, Footer, Header } from "antd/es/layout/layout";
 
 const { Title, Text } = Typography;
 
@@ -178,7 +188,7 @@ function App() {
     },
     {
       title: "Bien dong",
-      key: "action",
+      key: "change",
       render: (_, record) => {
         const isUp = record.price > 50;
 
@@ -317,181 +327,257 @@ function App() {
     },
   ];
   return (
-    <div style={{ padding: "50px", background: "#f0f2f5", minHeight: "100vh" }}>
-      <Card
+    <Layout style={{ minHeight: "100vh", width: '100vw' }}>
+      {/* 1. HEADER */}
+      <Header
         style={{
-          maxWidth: 900,
-          margin: "0 auto",
-          borderRadius: 12,
-          boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          background: "#001529",
         }}
       >
+        {/* Ben trai: Logo + Ten */}
         <div
           style={{
+            color: "white",
+            fontSize: 20,
+            fontWeight: "bold",
             display: "flex",
-            justifyContent: "space-between",
-            marginBottom: 20,
+            alignItems: "center",
+            gap: 10,
           }}
         >
-          <Statistic
-            title="So du kha dung"
-            value={userInfo?.balance}
-            precision={0}
-            suffix="VND"
-            style={{ color: "#3f8600", fontSize: 18 }}
+          <StockOutlined /> Stock Simulator
+        </div>
+        {/* Ben phai: Thong tin User */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ color: "white" }}>{userInfo?.username}</span>
+          <Avatar
+            icon={<UserOutlined />}
+            style={{ backgroundColor: "#87d068" }}
           />
-          <Button
-            type="primary"
-            icon={<WalletOutlined />}
-            onClick={() => SetIsDrawerOpen(true)}
-            size="large"
-          >
-            Xem Danh Muc Cua Toi
-          </Button>
         </div>
-        <div>
-          <Button size="large" onClick={fetchTradeHistory} icon={<WalletOutlined />}>
-            Lịch sử GD
-          </Button>
-        </div>
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <Title level={2} style={{ color: "#1890ff" }}>
-            <DesktopOutlined /> Sàn chứng khoán Real-time
-          </Title>
-          <Text type="secondary">
-            Dữ liệu được cập nhật trực tiếp qua WebSockets
-          </Text>
-        </div>
-        <Table
-          dataSource={stocks}
-          columns={columns}
-          rowKey="symbol"
-          pagination={false} // tat phan trang
-          bordered
-        />
-        <Modal
-          title={`Dat lenh MUA: ${selectedBuyStock?.symbol}`}
-          open={isBuyModalOpen}
-          onOk={handleBuyOk}
-          onCancel={handleBuyCancel}
-          okText="Xac nhan mua"
-          cancelText="Huy"
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <p>
-              Gia hien tai: <strong>{selectedBuyStock?.price}</strong>
-            </p>
-            <div>
-              <span>So luong mua: </span>
-              <InputNumber
-                min={10}
-                max={10000}
-                defaultValue={100}
-                value={buyQuantity}
-                onChange={(value) => setBuyQuantity(value)}
-                style={{ width: "100%" }}
-              />
-            </div>
-            <p style={{ marginTop: 10, color: "#1890ff" }}>
-              Tong tien du tinh:{" "}
-              <strong>
-                {(selectedBuyStock?.price * buyQuantity).toLocaleString()} VND
-              </strong>
-            </p>
-          </div>
-        </Modal>
-        <Drawer
-          title="Danh Mục Đầu Tư (My Portfolio)"
-          placement="right"
-          size={600}
-          onClose={() => SetIsDrawerOpen(false)}
-          open={isDrawerOpen}
-        >
-          <Table
-            dataSource={portfolioData}
-            columns={portfolioColumns}
-            rowKey="id"
-            pagination={false}
-          />
-        </Drawer>
-        <Modal
-          title={`Dat lenh BAN: ${selectedSellItem?.symbol}`}
-          open={isSellModalOpen}
-          onOk={handleSellOk}
-          onCancel={handleSellCancel}
-          okText="Xac nhan ban"
-          cancelText="Huy"
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <p>
-              Gia thi truong hien tai:{" "}
-              <strong>{selectedSellItem?.price}</strong>
-            </p>
-            <p>
-              Gia von cua ban:{" "}
-              <strong>{Number(selectedSellItem?.avgPrice)}</strong>
-            </p>
-            <div>
-              <span>So luong ban (Max: {selectedSellItem?.quantity}): </span>
-              <InputNumber
-                min={10}
-                max={selectedSellItem?.quantity}
-                value={sellQuantity}
-                onChange={(value) => setSellQuantity(value)}
-                style={{ width: "100%" }}
-              />
-            </div>
+      </Header>
+
+      {/* 2. CONTENT */}
+      <Content style={{padding: '30px 50px'}}>
             <div
               style={{
-                marginTop: 10,
-                padding: 10,
-                color: "#cf1322",
-                borderRadius: 5,
+                maxWidth: 1200,
+                margin: "0 auto",
               }}
             >
-              <p style={{ margin: 0 }}>
-                Tong tien thu ve:{" "}
-                <strong>
-                  {(
-                    selectedSellItem?.marketPrice * sellQuantity
-                  ).toLocaleString()}{" "}
-                  VND
-                </strong>
-              </p>
-              <p style={{ margin: 0, fontSize: 12, color: "#cf1322" }}>
-                {(selectedSellItem?.marketPrice - selectedSellItem?.avgPrice) *
-                  sellQuantity >=
-                0
-                  ? `Lai du kien: ${(
-                      (selectedSellItem?.marketPrice -
-                        selectedSellItem?.avgPrice) *
-                      sellQuantity
-                    ).toLocaleString()} VND`
-                  : `Lo du kien: ${(
-                      (selectedSellItem?.marketPrice -
-                        selectedSellItem?.avgPrice) *
-                      sellQuantity
-                    ).toLocaleString()} VND`}
-              </p>
+              <Row gutter={16} style={{ marginBottom: 20 }}>
+                <Col span={10}>
+                  <Card
+                    style={{
+                      height: "100%",
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    <Statistic
+                      title="Tài sản ròng (Net Worth)"
+                      value={userInfo?.balance}
+                      precision={0}
+                      style={{
+                        color: "#3f8600",
+                        fontSize: 30,
+                        fontWeight: "bold",
+                      }}
+                    />
+                  </Card>
+                </Col>
+                <Col span={14}>
+                  <Card
+                    style={{
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      alignItems: "center",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    }}
+                  >
+                    <Space size="large">
+                      <Button
+                        type="primary"
+                        size="large"
+                        icon={<WalletOutlined />}
+                        onClick={() => SetIsDrawerOpen(true)}
+                      >
+                        Quản lý Danh Mục
+                      </Button>
+                      <Button
+                        size="large"
+                        icon={<HistoryOutlined />}
+                        onClick={fetchTradeHistory}
+                      >
+                        Lịch sử Giao Dịch
+                      </Button>
+                    </Space>
+                  </Card>
+                </Col>
+              </Row>
             </div>
-          </div>
-        </Modal>
-        <Drawer
-          title="Lịch Sử Giao Dịch"
-          placement="left"
-          size={600}
-          onClose={() => setIsHistoryOpen(false)}
-          open={isHistoryOpen}
-        >
-          <Table
-            dataSource={historyData}
-            columns={historyColumns}
-            rowKey="id"
-            pagination={{ pageSize: 10 }}
-          ></Table>
-        </Drawer>
-      </Card>
-    </div>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <Title level={2} style={{ color: "#1890ff" }}>
+                <DesktopOutlined /> Sàn chứng khoán Real-time
+              </Title>
+            </div>
+            <Card
+              title = {
+                <span>
+                  <ThunderboltFilled style={{color: '#faad14', marginRight: 8}}/>
+                  Bảng Giá Trực Tuyến (Real-time Market)
+                </span>
+              }
+              variant="false"
+              style={{marginTop: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}}
+            >
+              <Table
+              dataSource={stocks}
+              columns={columns}
+              rowKey="symbol"
+              pagination={false} // tat phan trang
+              bordered
+            />
+            </Card>
+            <Modal
+              title={`Dat lenh MUA: ${selectedBuyStock?.symbol}`}
+              open={isBuyModalOpen}
+              onOk={handleBuyOk}
+              onCancel={handleBuyCancel}
+              okText="Xac nhan mua"
+              cancelText="Huy"
+            >
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+              >
+                <Alert
+                  title={`Giá thị trường: ${selectedBuyStock?.price}`}
+                  type="info"
+                  showIcon
+                />
+                <div>
+                  <span>So luong mua: </span>
+                  <InputNumber
+                    min={10}
+                    max={10000}
+                    defaultValue={100}
+                    value={buyQuantity}
+                    onChange={(value) => setBuyQuantity(value)}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
+                <Divider style={{ margin: "5px 0" }} />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text> Tổng thanh toán: </Text>
+                  <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+                    {(selectedBuyStock?.price * buyQuantity).toLocaleString()}{" "}
+                    VND
+                  </Title>
+                </div>
+              </div>
+            </Modal>
+            <Drawer
+              title="Danh Mục Đầu Tư (My Portfolio)"
+              placement="right"
+              size={600}
+              onClose={() => SetIsDrawerOpen(false)}
+              open={isDrawerOpen}
+            >
+              <Table
+                dataSource={portfolioData}
+                columns={portfolioColumns}
+                rowKey="id"
+                pagination={false}
+              />
+            </Drawer>
+            <Modal
+              title={`Dat lenh BAN: ${selectedSellItem?.symbol}`}
+              open={isSellModalOpen}
+              onOk={handleSellOk}
+              onCancel={handleSellCancel}
+              okText="Xac nhan ban"
+              cancelText="Huy"
+            >
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+              >
+                <Alert
+                  title={`Giá thị trường hiện tại: ${selectedSellItem?.marketPrice} VND`}
+                  type="info"
+                  showIcon
+                />
+                <Alert
+                  title={`Giá vốn của bạn: ${Number(
+                    selectedSellItem?.avgPrice
+                  )} VND`}
+                  type="info"
+                  showIcon
+                />
+                <div>
+                  <span>
+                    So luong ban (Max: {selectedSellItem?.quantity}):{" "}
+                  </span>
+                  <InputNumber
+                    min={1}
+                    max={selectedSellItem?.quantity}
+                    value={sellQuantity}
+                    onChange={(value) => setSellQuantity(value)}
+                    style={{ width: "100%" }}
+                  />
+                </div>
+                <Divider style={{margin: '5px 0'}}/>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <Text>Tổng tiền thu về: </Text>
+                  <Title level={4} style={{margin: 0, color: '#008000'}}>{(selectedSellItem?.marketPrice*sellQuantity).toLocaleString()} VND</Title>
+                </div>
+                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                  <Text>{(selectedSellItem?.marketPrice - selectedSellItem?.avgPrice) *sellQuantity >= 0 ? 'Lãi dự kiến:' : 'Lỗ dự kiến:'}</Text>
+                  <Title level={4} style={{margin: 0, color:'#cf1322'}}>{((selectedSellItem?.marketPrice - selectedSellItem?.avgPrice)*sellQuantity).toLocaleString()} VND</Title>
+                </div>
+              </div>
+            </Modal>
+            <Drawer
+              title="Lịch Sử Giao Dịch"
+              placement="left"
+              size={600}
+              onClose={() => setIsHistoryOpen(false)}
+              open={isHistoryOpen}
+            >
+              <Table
+                dataSource={historyData}
+                columns={historyColumns}
+                rowKey="id"
+                pagination={{ pageSize: 10 }}
+              ></Table>
+            </Drawer>
+
+      </Content>
+      {/* 3. FOOTER */}
+      <Footer style={{ textAlign: "center" }}>
+        Stock App ©2025 Created by Cloudz
+      </Footer>
+    </Layout>
   );
 }
 
