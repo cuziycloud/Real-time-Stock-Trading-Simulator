@@ -26,63 +26,102 @@ const { Title, Text } = Typography;
 
 function App() {
   const [stocks, setStocks] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false); //Bien kiem soat popup mua hang
-  const [selectedStock, setSelectedStock] = useState(null); //Bien luu xem ng dung dang dinh mua ma nao
-  const [buyQuantity, setBuyQuantity] = useState(100); //Bien luu so luong ma ng dung muon mua (mac dinh 100)
-  const [userInfo, setUserInfo] = useState(null); //Tien va danh muc co phieu
+
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false); // Modal mua
+  const [selectedBuyStock, setSelectedBuyStock] = useState(null); // Ma dang chon mua
+  const [buyQuantity, setBuyQuantity] = useState(100); // Bien luu so luong ma ng dung muon mua (default: 100)
+
+  const [userInfo, setUserInfo] = useState(null); // Tien va danh muc co phieu
   const [isDrawerOpen, SetIsDrawerOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(false); //Chay lai useEffect - fetchUserInfo
+  const [refreshKey, setRefreshKey] = useState(false); // Chay lai useEffect - fetchUserInfo
+
+  const [isSellModalOpen, setIsSellModalOpen] = useState(false); // Modal ban
+  const [selectedSellItem, setSelectedSellItem] = useState(null); // Item dang chon ban
+  const [sellQuantity, setSellQuantity] = useState(0); // SL co phieu ban
 
   useEffect(() => {
     let isMounted = true; //Co ktra component con song ko
 
-    const fetchUserInfo = async() => {
+    const fetchUserInfo = async () => {
       try {
         const res = await axios.get("http://localhost:3000/users/1");
-        if(isMounted) { //Chi set state khi component con
+        if (isMounted) {
+          //Chi set state khi component con
           setUserInfo(res.data);
         }
       } catch (error) {
         console.error("Loi khong tim thay user", error);
       }
-    }
+    };
     fetchUserInfo();
 
-    return () => {isMounted = false};
-  },[refreshKey]);
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshKey]);
 
   const showBuyModal = (stockRecord) => {
-    setSelectedStock(stockRecord);
+    setSelectedBuyStock(stockRecord);
     setBuyQuantity(100);
-    setIsModalOpen(true);
+    setIsBuyModalOpen(true);
   };
 
-  const handleOk = async () => {
-    if (!selectedStock) return;
+  const showSellModal = (portfolioItem) => {
+    setSelectedSellItem(portfolioItem);
+    setSellQuantity(portfolioItem.quantity);
+    setIsSellModalOpen(true);
+  };
+
+  const handleBuyOk = async () => {
+    if (!selectedBuyStock) return;
 
     try {
-      const respone = await axios.post("http://localhost:3000/users/buy", {
+      const res = await axios.post("http://localhost:3000/users/buy", {
         userId: 1,
-        symbol: selectedStock.symbol,
+        symbol: selectedBuyStock.symbol,
         quantity: buyQuantity,
-        price: selectedStock.price,
+        price: selectedBuyStock.price,
       });
 
       message.success(
-        `Mua thanh cong. So du con lai: ${respone.data.currentBalance.toLocaleString()} VND`
+        `Mua thanh cong. So du con lai: ${res.data.currentBalance.toLocaleString()} VND`
       );
 
-      setIsModalOpen(false);
-      setRefreshKey(prev => !prev);
+      setIsBuyModalOpen(false);
+      setRefreshKey((prev) => !prev);
     } catch (error) {
-      message.error(
-        `That bai: ${error.respone?.data?.message || "Loi he thong"}`
-      );
+      message.error(`That bai: ${error.res?.data?.message || "Loi he thong"}`);
     }
   };
 
-  const handleCancel = () => {
-    setIsModalOpen(false);
+  const handleBuyCancel = () => {
+    setIsBuyModalOpen(false);
+  };
+
+  const handleSellOk = async () => {
+    if (!selectedSellItem) return;
+
+    try {
+      const res = await axios.post("http://localhost:3000/users/sell", {
+        userId: 1,
+        symbol: selectedSellItem.symbol,
+        quantity: sellQuantity,
+        price: selectedSellItem.marketPrice, // Ban theo gtt
+      });
+
+      message.success(
+        `Ban thanh cong. So du con lai: ${res.data.currentBalance.toLocaleString()} VND`
+      );
+
+      setIsSellModalOpen(false);
+      setRefreshKey((prev) => !prev);
+    } catch (error) {
+      message.error(`That bai: ${error.res?.data?.message || "Loi he thong"}`);
+    }
+  };
+
+  const handleSellCancel = () => {
+    setIsSellModalOpen(false);
   };
 
   useEffect(() => {
@@ -152,46 +191,70 @@ function App() {
     },
   ];
 
-  //Logic tinh toan danh muc
-  //Portfolio lay tu API chi co gia von. Can map voi gtt (stocks) de tinh lai lo
+  // Logic tinh toan danh muc
+  // Portfolio lay tu API chi co gia von. Can map voi gtt (stocks) de tinh lai lo
   const portfolioData = userInfo?.portfolio?.map((item) => {
     // 1. Tim gia hien tai cua ma nay trong stocks (Real-time)
     const currentStock = stocks.find((s) => s.symbol === item.symbol);
-    const marketPrice = currentStock? currentStock.price: item.avgPrice;
+    const marketPrice = currentStock ? currentStock.price : item.avgPrice;
 
     // 2. Tinh lai lo: (Gia hien tai - Gia von)* SL
-    const profit = (marketPrice - item.avgPrice)*item.quantity;
-    const profitPercent = ((marketPrice-item.avgPrice)/item.avgPrice)*100;
+    const profit = (marketPrice - item.avgPrice) * item.quantity;
+    const profitPercent = ((marketPrice - item.avgPrice) / item.avgPrice) * 100;
 
     return {
       ...item,
       marketPrice,
       profit,
-      profitPercent
+      profitPercent,
     };
-  })
+  });
 
   const portfolioColumns = [
-    {title: 'Ma', dataIndex: 'symbol', key: 'symbol', render: t => <Tag color="orange">{t}</Tag>},
-    {title: 'So luong', dataIndex: 'quantity', key: 'quantity'},
-    {title: 'Gia von', dataIndex: 'avgPrice', key: 'avgPrice', render: p => Number(p).toLocaleString()},
     {
-      title: 'Gia TT',
-      dataIndex: 'marketPrice',
-      key: 'marketPrice',
-      render: (p) => <Text strong>{p.toLocaleString()}</Text>
+      title: "Ma",
+      dataIndex: "symbol",
+      key: "symbol",
+      render: (t) => <Tag color="orange">{t}</Tag>,
+    },
+    { title: "So luong", dataIndex: "quantity", key: "quantity" },
+    {
+      title: "Gia von",
+      dataIndex: "avgPrice",
+      key: "avgPrice",
+      render: (p) => Number(p).toLocaleString(),
     },
     {
-      title: 'Lai/ Lo',
-      key: 'profit',
+      title: "Gia TT",
+      dataIndex: "marketPrice",
+      key: "marketPrice",
+      render: (p) => <Text strong>{p.toLocaleString()}</Text>,
+    },
+    {
+      title: "Lai/ Lo",
+      key: "profit",
       render: (_, record) => {
-        const color = record.profit >= 0? 'green' : 'red';
-        return(
-          <span style={{color, fontWeight: 'bold'}}>
-            {record.profit.toLocaleString()} ({record.profitPercent.toFixed(2)}%)
+        const color = record.profit >= 0 ? "green" : "red";
+        return (
+          <span style={{ color, fontWeight: "bold" }}>
+            {record.profit.toLocaleString()} ({record.profitPercent.toFixed(2)}
+            %)
           </span>
-        )
-      }
+        );
+      },
+    },
+    {
+      title: "Hanh dong",
+      key: "action",
+      render: (_, record) => (
+        <Button
+          type="primary"
+          size="medium"
+          onClick={() => showSellModal(record)}
+        >
+          Bán
+        </Button>
+      ),
     },
   ];
   return (
@@ -204,17 +267,23 @@ function App() {
           boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
         }}
       >
-        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 20}}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 20,
+          }}
+        >
           <Statistic
-            title = "So du kha dung"
+            title="So du kha dung"
             value={userInfo?.balance}
             precision={0}
-            suffix= "VND"
-            style={{color: '#3f8600', fontSize: 18}}
+            suffix="VND"
+            style={{ color: "#3f8600", fontSize: 18 }}
           />
           <Button
             type="primary"
-            icon={<WalletOutlined/>}
+            icon={<WalletOutlined />}
             onClick={() => SetIsDrawerOpen(true)}
             size="large"
           >
@@ -237,16 +306,16 @@ function App() {
           bordered
         />
         <Modal
-          title={`Dat lenh MUA: ${selectedStock?.symbol}`}
-          open={isModalOpen}
-          onOk={handleOk}
-          onCancel={handleCancel}
+          title={`Dat lenh MUA: ${selectedBuyStock?.symbol}`}
+          open={isBuyModalOpen}
+          onOk={handleBuyOk}
+          onCancel={handleBuyCancel}
           okText="Xac nhan mua"
           cancelText="Huy"
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <p>
-              Gia hien tai: <strong>{selectedStock?.price}</strong>
+              Gia hien tai: <strong>{selectedBuyStock?.price}</strong>
             </p>
             <div>
               <span>So luong mua: </span>
@@ -262,13 +331,13 @@ function App() {
             <p style={{ marginTop: 10, color: "#1890ff" }}>
               Tong tien du tinh:{" "}
               <strong>
-                {(selectedStock?.price * buyQuantity).toLocaleString()} VND
+                {(selectedBuyStock?.price * buyQuantity).toLocaleString()} VND
               </strong>
             </p>
           </div>
         </Modal>
         <Drawer
-          title = "Danh Mục Đầu Tư (My Portfolio)"
+          title="Danh Mục Đầu Tư (My Portfolio)"
           placement="right"
           size={600}
           onClose={() => SetIsDrawerOpen(false)}
@@ -281,6 +350,68 @@ function App() {
             pagination={false}
           />
         </Drawer>
+        <Modal
+          title={`Dat lenh BAN: ${selectedSellItem?.symbol}`}
+          open={isSellModalOpen}
+          onOk={handleSellOk}
+          onCancel={handleSellCancel}
+          okText="Xac nhan ban"
+          cancelText="Huy"
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <p>
+              Gia thi truong hien tai:{" "}
+              <strong>{selectedSellItem?.price}</strong>
+            </p>
+            <p>
+              Gia von cua ban:{" "}
+              <strong>{Number(selectedSellItem?.avgPrice)}</strong>
+            </p>
+            <div>
+              <span>So luong ban (Max: {selectedSellItem?.quantity}): </span>
+              <InputNumber
+                min={10}
+                max={selectedSellItem?.quantity}
+                value={sellQuantity}
+                onChange={(value) => setSellQuantity(value)}
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div
+              style={{
+                marginTop: 10,
+                padding: 10,
+                color: "#cf1322",
+                borderRadius: 5,
+              }}
+            >
+              <p style={{ margin: 0 }}>
+                Tong tien thu ve:{" "}
+                <strong>
+                  {(
+                    selectedSellItem?.marketPrice * sellQuantity
+                  ).toLocaleString()}{" "}
+                  VND
+                </strong>
+              </p>
+              <p style={{ margin: 0, fontSize: 12, color: "#cf1322" }}>
+                {(selectedSellItem?.marketPrice - selectedSellItem?.avgPrice) *
+                  sellQuantity >=
+                0
+                  ? `Lai du kien: ${(
+                      (selectedSellItem?.marketPrice -
+                        selectedSellItem?.avgPrice) *
+                      sellQuantity
+                    ).toLocaleString()} VND`
+                  : `Lo du kien: ${(
+                      (selectedSellItem?.marketPrice -
+                        selectedSellItem?.avgPrice) *
+                      sellQuantity
+                    ).toLocaleString()} VND`}
+              </p>
+            </div>
+          </div>
+        </Modal>
       </Card>
     </div>
   );

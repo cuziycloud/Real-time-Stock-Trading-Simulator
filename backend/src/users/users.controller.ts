@@ -10,6 +10,7 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { TradeStockDto } from './dto/trade-stock.dto';
 
 @Controller('users')
 export class UsersController {
@@ -21,21 +22,13 @@ export class UsersController {
   }
 
   @Post('buy')
-  buyStock(
-    @Body()
-    body: {
-      userId: number;
-      symbol: string;
-      quantity: number;
-      price: number;
-    },
-  ) {
-    return this.usersService.buyStock(
-      body.userId,
-      body.symbol,
-      body.quantity,
-      body.price,
-    );
+  buyStock(@Body() tradeDto: TradeStockDto) {
+    return this.usersService.buyStock(tradeDto);
+  }
+
+  @Post('sell')
+  sellStock(@Body() tradeDto: TradeStockDto) {
+    return this.usersService.sellStock(tradeDto);
   }
 
   @Post()

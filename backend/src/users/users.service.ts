@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Portfolio } from './entities/portfolio.entity';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
+import { TradeStockDto } from './dto/trade-stock.dto';
 
 @Injectable()
 export class UsersService {
@@ -23,12 +24,8 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
-  async buyStock(
-    userId: number,
-    symbol: string,
-    quantity: number,
-    price: number,
-  ) {
+  async buyStock(dto: TradeStockDto) {
+    const { userId, symbol, quantity, price } = dto;
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ['portfolio'],
@@ -69,7 +66,8 @@ export class UsersService {
     };
   }
 
-  async findOne(id: number) { //tra ve balance + por hien co
+  async findOne(id: number) {
+    //tra ve balance + por hien co
     const user = await this.userRepository.findOne({
       where: { id: id },
       relations: ['portfolio'],
@@ -77,6 +75,58 @@ export class UsersService {
     if (!user) throw new BadRequestException('User khong ton tai');
 
     return user;
+  }
+
+  async sellStock(dto: TradeStockDto) {
+    const { userId, symbol, quantity, price } = dto;
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['portfolio'],
+    });
+
+    if (!user) throw new BadRequestException('User khogn ton tai');
+
+    const portfolioItem = await this.portfolioRepository.findOne({
+      where: {
+        user: { id: userId },
+        symbol: symbol,
+      },
+    });
+
+    if (!portfolioItem)
+      throw new BadRequestException(`Ban chua so huu ma ${symbol}`);
+
+    if (portfolioItem.quantity < quantity)
+      throw new BadRequestException(
+        `So luong khong du. Ban co ${portfolioItem.quantity}, muon ban ${quantity}`,
+      );
+
+    const revenue = quantity * price;
+    //
+    const profitOrLoss = (price - Number(portfolioItem.avgPrice)) * quantity;
+    console.log(`Gia trung binh: ${Number(portfolioItem.avgPrice)}`);
+    console.log(`Giao dich nay ban lai/ lo: ${profitOrLoss}`);
+    user.balance = Number(user.balance) + revenue;
+    await this.userRepository.save(user);
+
+    const remainingQuantity = portfolioItem.quantity - quantity;
+
+    if (remainingQuantity === 0) {
+      await this.portfolioRepository.remove(portfolioItem);
+    } else {
+      portfolioItem.quantity -= remainingQuantity;
+      await this.portfolioRepository.save(portfolioItem);
+    }
+
+    return {
+      status: 'SUCCESS',
+      message: `Da ban thanh cong ${quantity} co phieu ${symbol}`,
+      revenue: revenue,
+      profit: profitOrLoss,
+      currentBalance: user.balance,
+      remainingStock: remainingQuantity,
+    };
   }
 
   create(createUserDto: CreateUserDto) {
