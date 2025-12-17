@@ -36,11 +36,6 @@ export class UsersController {
     return this.usersService.getTradeHistory(+id);
   }
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
-  }
-
   @Get()
   findAll() {
     return this.usersService.findAll();

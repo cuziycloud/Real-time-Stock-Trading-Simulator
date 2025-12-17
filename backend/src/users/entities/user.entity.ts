@@ -10,6 +10,12 @@ export class User {
   @Column()
   username: string;
 
+  @Column({ unique: true })
+  email: string;
+
+  @Column()
+  password: string;
+
   @Column('decimal', { precision: 15, scale: 2, default: 100000000 })
   balance: number;
 

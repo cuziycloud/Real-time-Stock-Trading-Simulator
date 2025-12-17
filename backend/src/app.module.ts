@@ -5,6 +5,7 @@ import { StocksModule } from './stocks/stocks.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EventsGateway } from './events/events.gateway';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { UsersModule } from './users/users.module';
     }),
     StocksModule,
     UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService, EventsGateway],
