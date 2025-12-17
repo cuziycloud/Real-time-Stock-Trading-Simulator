@@ -21,7 +21,7 @@ export class EventsGateway implements OnGatewayInit {
 
     setInterval(() => {
       this.handleMarketFluctuation();
-    }, 2000);
+    }, 10000);
   }
 
   handleMarketFluctuation() {
