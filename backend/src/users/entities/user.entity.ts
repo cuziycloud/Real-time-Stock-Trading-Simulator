@@ -1,5 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Portfolio } from './portfolio.entity';
+import { Transaction } from './transaction.entity';
 
 @Entity()
 export class User {
@@ -12,6 +13,8 @@ export class User {
   @Column('decimal', { precision: 15, scale: 2, default: 100000000 })
   balance: number;
 
-  @OneToMany(() => Portfolio, (portforlio) => portforlio.user)
+  @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolio: Portfolio[];
+  @OneToMany(() => Transaction, (transaction) => transaction.user)
+  transaction: Transaction[];
 }

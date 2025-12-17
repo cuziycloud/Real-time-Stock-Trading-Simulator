@@ -6,6 +6,7 @@ import { Portfolio } from './entities/portfolio.entity';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { TradeStockDto } from './dto/trade-stock.dto';
+import { Transaction } from './entities/transaction.entity';
 
 @Injectable()
 export class UsersService {
@@ -14,6 +15,8 @@ export class UsersService {
     private userRepository: Repository<User>,
     @InjectRepository(Portfolio)
     private portfolioRepository: Repository<Portfolio>,
+    @InjectRepository(Transaction)
+    private transactionRepository: Repository<Transaction>,
   ) {}
 
   async createMockUser() {
@@ -57,6 +60,16 @@ export class UsersService {
       });
     }
     await this.portfolioRepository.save(portfolioItem);
+
+    await this.transactionRepository.save({
+      user: user,
+      symbol: symbol,
+      type: 'BUY',
+      quantity: quantity,
+      price: price,
+      total: quantity * price,
+      timestamp: new Date(), //Gan tay
+    });
 
     return {
       status: 'Success',
@@ -119,6 +132,16 @@ export class UsersService {
       await this.portfolioRepository.save(portfolioItem);
     }
 
+    await this.transactionRepository.save({
+      user: user,
+      symbol: symbol,
+      type: 'SELL',
+      quantity: quantity,
+      price: price,
+      total: quantity * price,
+      timestamp: new Date(),
+    });
+
     return {
       status: 'SUCCESS',
       message: `Da ban thanh cong ${quantity} co phieu ${symbol}`,
@@ -127,6 +150,15 @@ export class UsersService {
       currentBalance: user.balance,
       remainingStock: remainingQuantity,
     };
+  }
+
+  async getTradeHistory(userId: number) {
+    return this.transactionRepository.find({
+      where: {
+        user: { id: userId },
+      },
+      order: { createdAt: 'DESC' }, //Latest
+    });
   }
 
   create(createUserDto: CreateUserDto) {

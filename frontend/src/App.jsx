@@ -39,6 +39,10 @@ function App() {
   const [selectedSellItem, setSelectedSellItem] = useState(null); // Item dang chon ban
   const [sellQuantity, setSellQuantity] = useState(0); // SL co phieu ban
 
+  // State quản lý Drawer Lịch sử
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyData, setHistoryData] = useState([]);
+
   useEffect(() => {
     let isMounted = true; //Co ktra component con song ko
 
@@ -138,6 +142,16 @@ function App() {
       socket.disconnect();
     };
   }, []);
+
+  const fetchTradeHistory = async () => {
+    try {
+      const res = await axios.get("http://localhost:3000/users/1/history");
+      setHistoryData(res.data);
+      setIsHistoryOpen(true);
+    } catch {
+      message.error("Không tải được lịch sử");
+    }
+  };
 
   const columns = [
     {
@@ -257,6 +271,51 @@ function App() {
       ),
     },
   ];
+
+  const historyColumns = [
+    {
+      title: "Thời gian",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (date) => new Date(date).toLocaleString("vi-VN"),
+    },
+    {
+      title: "Loại",
+      dataIndex: "type",
+      key: "type",
+      render: (type) => (
+        <Tag color={type === "BUY" ? "blue" : "volcano"}>
+          {type === "BUY" ? "MUA" : "BÁN"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Mã",
+      dataIndex: "symbol",
+      key: "symbol",
+      render: (t) => <b>{t}</b>,
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "quantity",
+      key: "quantity",
+    },
+    {
+      title: "Giá khớp",
+      dataIndex: "price",
+      key: "price",
+      render: (p) => Number(p).toLocaleString(),
+    },
+    {
+      title: "Tổng tiền",
+      key: "total",
+      render: (_, record) => (
+        <Text type={record.type === "BUY" ? "secondary" : "success"}>
+          {(record.price * record.quantity).toLocaleString()}
+        </Text>
+      ),
+    },
+  ];
   return (
     <div style={{ padding: "50px", background: "#f0f2f5", minHeight: "100vh" }}>
       <Card
@@ -288,6 +347,11 @@ function App() {
             size="large"
           >
             Xem Danh Muc Cua Toi
+          </Button>
+        </div>
+        <div>
+          <Button size="large" onClick={fetchTradeHistory} icon={<WalletOutlined />}>
+            Lịch sử GD
           </Button>
         </div>
         <div style={{ textAlign: "center", marginBottom: 20 }}>
@@ -412,6 +476,20 @@ function App() {
             </div>
           </div>
         </Modal>
+        <Drawer
+          title="Lịch Sử Giao Dịch"
+          placement="left"
+          size={600}
+          onClose={() => setIsHistoryOpen(false)}
+          open={isHistoryOpen}
+        >
+          <Table
+            dataSource={historyData}
+            columns={historyColumns}
+            rowKey="id"
+            pagination={{ pageSize: 10 }}
+          ></Table>
+        </Drawer>
       </Card>
     </div>
   );

@@ -31,6 +31,11 @@ export class UsersController {
     return this.usersService.sellStock(tradeDto);
   }
 
+  @Get(':id/history')
+  getTradeHistory(@Param('id') id: string) {
+    return this.usersService.getTradeHistory(+id);
+  }
+
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
