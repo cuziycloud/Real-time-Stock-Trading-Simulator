@@ -21,6 +21,7 @@ import {
   Dropdown,
   Spin,
   Tabs,
+  notification,
 } from "antd";
 import {
   UserOutlined,
@@ -187,10 +188,32 @@ function App() {
   };
 
   useEffect(() => {
+    if (!isAuthenticated || !userInfo) return; // Cần userInfo để biết ID mà join room
     console.log("Dang ket noi...");
 
     const socket = io("http://localhost:3000");
 
+    // 1. Join room khi vừa kết nối
+    socket.on("connect", () => {
+      // Gửi ID của mình lên để BE nhốt vào phòng
+      socket.emit("join-room", userInfo.id);
+    });
+
+    // 2. Lắng nghe sk khớp lệnh
+    socket.on("order-matched", (data) => {
+      notification.success({
+        title: "Khớp Lệnh Thành Công",
+        description: `${data.message} (SL: ${data.quantity} - Giá: ${data.price})`,
+        placement: "topRight",
+        duration: 4,
+      });
+      // Tự động reload lại
+      setRefreshKey((prev) => !prev);
+
+      fetchMyOrders();
+    });
+
+    // 3. Lắng nghe gtt
     socket.on("market-update", (dataTuServerGuive) => {
       console.log("Nhan duoc gia moi: ", dataTuServerGuive);
 
@@ -199,7 +222,7 @@ function App() {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [isAuthenticated, userInfo]);
 
   const fetchTradeHistory = async () => {
     try {
@@ -497,7 +520,7 @@ function App() {
       {/* 2. CONTENT */}
       <Content
         style={{
-          padding: "16px 8px",
+          padding: "16px 24px",
           width: "100%",
           maxWidth: "100%",
           boxSizing: "border-box",
