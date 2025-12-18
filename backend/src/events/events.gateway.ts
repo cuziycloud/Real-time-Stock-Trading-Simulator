@@ -14,6 +14,9 @@ export class EventsGateway implements OnGatewayInit {
     { symbol: 'VIC', price: 43.5 },
     { symbol: 'FPT', price: 98.0 },
     { symbol: 'MWG', price: 45.0 },
+    { symbol: 'PNJ', price: 35.2 },
+    { symbol: 'VNM', price: 55.9 },
+    { symbol: 'PHS', price: 80.5 },
   ];
 
   afterInit(server: Server) {

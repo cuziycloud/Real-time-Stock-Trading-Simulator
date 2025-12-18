@@ -18,6 +18,8 @@ import {
   Space,
   Alert,
   Divider,
+  Dropdown,
+  Spin,
 } from "antd";
 import {
   UserOutlined,
@@ -29,6 +31,7 @@ import {
   HistoryOutlined,
   ThunderboltFilled,
   LogoutOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 import axiosClient from "./services/axios-client";
@@ -40,28 +43,29 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(
     !!localStorage.getItem("access_token")
   );
+  const [isAppLoading, setIsAppLoading] = useState(true); // State loading toàn App
 
   const [stocks, setStocks] = useState([]);
+  const [userInfo, setUserInfo] = useState(null); // Tien va danh muc co phieu
+  const [historyData, setHistoryData] = useState([]);
 
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false); // Modal mua
   const [selectedBuyStock, setSelectedBuyStock] = useState(null); // Ma dang chon mua
   const [buyQuantity, setBuyQuantity] = useState(100); // Bien luu so luong ma ng dung muon mua (default: 100)
 
-  const [userInfo, setUserInfo] = useState(null); // Tien va danh muc co phieu
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(false); // Chay lai useEffect - fetchUserInfo
-
   const [isSellModalOpen, setIsSellModalOpen] = useState(false); // Modal ban
   const [selectedSellItem, setSelectedSellItem] = useState(null); // Item dang chon ban
   const [sellQuantity, setSellQuantity] = useState(0); // SL co phieu ban
 
-  // State quản lý Drawer Lịch sử
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [historyData, setHistoryData] = useState([]);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false); // Drawer Portfolio
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false); // Drawer Lịch sử
+
+  const [refreshKey, setRefreshKey] = useState(false); // Chay lai useEffect - fetchUserInfo
 
   useEffect(() => {
-    let isMounted = true; //Co ktra component con song ko
-    if (!isAuthenticated) return;
+    let isMounted = true; // Ktra component con song ko
+
+    if (!isAuthenticated) return; // Chưa login => ko call api
 
     const fetchUserInfo = async () => {
       try {
@@ -72,6 +76,9 @@ function App() {
         }
       } catch (error) {
         console.error("Loi khong tim thay user", error);
+        if (error.respone?.status === 401) setIsAuthenticated(false);
+      } finally {
+        setIsAppLoading(false);
       }
     };
     fetchUserInfo();
@@ -143,11 +150,18 @@ function App() {
     setIsSellModalOpen(false);
   };
 
+  const handleLogOut = () => {
+    localStorage.removeItem("access_token");
+    setUserInfo(null); // Xóa dl trong RAM
+    setIsAuthenticated(false);
+    message.info("Đăng xuất thành công");
+  };
+
   useEffect(() => {
     console.log("Dang ket noi...");
 
     const socket = io("http://localhost:3000");
-    
+
     socket.on("market-update", (dataTuServerGuive) => {
       console.log("Nhan duoc gia moi: ", dataTuServerGuive);
 
@@ -167,6 +181,30 @@ function App() {
       message.error("Không tải được lịch sử");
     }
   };
+
+  // Logic tinh toan danh muc
+  // Portfolio lay tu API chi co gia von. Can map voi gtt (stocks) de tinh lai lo
+  const portfolioData = userInfo?.portfolio?.map((item) => {
+    // 1. Tim gia hien tai cua ma nay trong stocks (Real-time)
+    const currentStock = stocks.find((s) => s.symbol === item.symbol);
+    const marketPrice = currentStock
+      ? currentStock.price
+      : Number(item.avgPrice);
+
+    // 2. Tinh lai lo: (Gia hien tai - Gia von)* SL
+    const profit = (marketPrice - item.avgPrice) * item.quantity;
+    const profitPercent =
+      item.avgPrice > 0
+        ? ((marketPrice - item.avgPrice) / item.avgPrice) * 100
+        : 0;
+
+    return {
+      ...item,
+      marketPrice,
+      profit,
+      profitPercent,
+    };
+  });
 
   const columns = [
     {
@@ -219,25 +257,6 @@ function App() {
       ),
     },
   ];
-
-  // Logic tinh toan danh muc
-  // Portfolio lay tu API chi co gia von. Can map voi gtt (stocks) de tinh lai lo
-  const portfolioData = userInfo?.portfolio?.map((item) => {
-    // 1. Tim gia hien tai cua ma nay trong stocks (Real-time)
-    const currentStock = stocks.find((s) => s.symbol === item.symbol);
-    const marketPrice = currentStock ? currentStock.price : item.avgPrice;
-
-    // 2. Tinh lai lo: (Gia hien tai - Gia von)* SL
-    const profit = (marketPrice - item.avgPrice) * item.quantity;
-    const profitPercent = ((marketPrice - item.avgPrice) / item.avgPrice) * 100;
-
-    return {
-      ...item,
-      marketPrice,
-      profit,
-      profitPercent,
-    };
-  });
 
   const portfolioColumns = [
     {
@@ -331,9 +350,44 @@ function App() {
       ),
     },
   ];
+
+  // Dropdown
+  const userMenu = {
+    items: [
+      { key: "1", label: "Hồ sơ cá nhân" },
+      { type: "divider" },
+      {
+        type: "2",
+        label: "Đăng xuất",
+        icon: <LogoutOutlined />,
+        danger: true,
+        onClick: handleLogOut,
+      },
+    ],
+  };
+
   if (!isAuthenticated) {
     return <LoginPage onLoginSuccess={() => setIsAuthenticated(true)} />;
   }
+
+  if (isAppLoading) {
+    return (
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: "#f0f2f5",
+        }}
+      >
+        <Spin tip="Loading..." size="large">
+          <div style={{ height: "100vh" }}></div>
+        </Spin>
+      </div>
+    );
+  }
+
   return (
     <Layout style={{ minHeight: "100vh", width: "100vw" }}>
       {/* 1. HEADER */}
@@ -358,22 +412,26 @@ function App() {
         >
           <StockOutlined /> Stock Simulator
         </div>
-        {/* Ben phai: Thong tin User */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ color: "white" }}>{userInfo?.username}</span>
-          <Avatar
-            icon={<UserOutlined />}
-            style={{ backgroundColor: "#87d068" }}
-          />
-          <Button
-            type="text"
-            icon={<LogoutOutlined />}
-            onClick={() => {
-              localStorage.removeItem("access_token");
-              setIsAuthenticated(false);
+        {/* Ben trai: Ten + Ava (dropdown) */}
+        <Dropdown menu={userMenu} placement="bottomRight" arrow>
+          <div
+            style={{
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
             }}
-          />
-        </div>
+          >
+            <Avatar
+              style={{ backgroundColor: "#1890ff" }}
+              icon={<UserOutlined />}
+            />
+            <span style={{ color: "white" }}>
+              {userInfo?.username || "Trader"}{" "}
+              <DownOutlined style={{ fontSize: 10 }} />
+            </span>
+          </div>
+        </Dropdown>
       </Header>
 
       {/* 2. CONTENT */}

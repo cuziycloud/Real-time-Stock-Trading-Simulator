@@ -56,7 +56,7 @@ const LoginPage = ({ onLoginSuccess }) => {
         background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', 
     }}>
         <Card 
-            bordered={false}
+            variant="false"
             style={{ 
                 width: 420, 
                 boxShadow: '0 8px 24px rgba(0,0,0,0.15)', 
