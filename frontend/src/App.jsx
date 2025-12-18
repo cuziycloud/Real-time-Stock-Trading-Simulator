@@ -20,6 +20,7 @@ import {
   Divider,
   Dropdown,
   Spin,
+  Tabs,
 } from "antd";
 import {
   UserOutlined,
@@ -32,6 +33,7 @@ import {
   ThunderboltFilled,
   LogoutOutlined,
   DownOutlined,
+  OrderedListOutlined,
 } from "@ant-design/icons";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 import axiosClient from "./services/axios-client";
@@ -56,6 +58,12 @@ function App() {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false); // Modal ban
   const [selectedSellItem, setSelectedSellItem] = useState(null); // Item dang chon ban
   const [sellQuantity, setSellQuantity] = useState(0); // SL co phieu ban
+
+  const [orderType, setOrderType] = useState("MARKET"); // Loại lệnh: MARKET/ LIMIT
+  const [targetPrice, setTargetPrice] = useState(0); // Giá mục tiêu cho lệnh Limit
+
+  const [isOrdersDrawerOpen, setIsOrdersDrawerOpen] = useState(false); // Drawer quản lý lệnh chờ
+  const [myOrders, setMyOrders] = useState([]);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false); // Drawer Portfolio
   const [isHistoryOpen, setIsHistoryOpen] = useState(false); // Drawer Lịch sử
@@ -104,15 +112,30 @@ function App() {
     if (!selectedBuyStock) return;
 
     try {
-      const res = await axiosClient.post("/users/buy", {
-        symbol: selectedBuyStock.symbol,
-        quantity: buyQuantity,
-        price: selectedBuyStock.price,
-      });
+      if (orderType === "MARKET") {
+        const res = await axiosClient.post("/users/buy", {
+          symbol: selectedBuyStock.symbol,
+          quantity: buyQuantity,
+          price: selectedBuyStock.price, // Giá của mã đang chọn - mua luôn ko cần khớp
+        });
 
-      message.success(
-        `Mua thanh cong. So du con lai: ${res.data.currentBalance.toLocaleString()} VND`
-      );
+        message.success(
+          `Mua khớp lệnh ngay thành công. Số dư còn lại: ${res.data.currentBalance.toLocaleString()} VND`
+        );
+      } else {
+        if (targetPrice <= 0) {
+          message.error("Vui lòng nhập giá muốn mua hợp lệ!");
+          return;
+        }
+
+        await axiosClient.post("/orders/place", {
+          symbol: selectedBuyStock.symbol,
+          direction: "BUY",
+          quantity: buyQuantity,
+          targetPrice: targetPrice, // Giá mà bản thân mong muốn - khớp mới mua
+        });
+        message.success("Đã đặt lệnh chờ mua thành công");
+      }
 
       setIsBuyModalOpen(false);
       setRefreshKey((prev) => !prev);
@@ -121,33 +144,39 @@ function App() {
     }
   };
 
-  const handleBuyCancel = () => {
-    setIsBuyModalOpen(false);
-  };
-
   const handleSellOk = async () => {
     if (!selectedSellItem) return;
 
     try {
-      const res = await axiosClient.post("/users/sell", {
-        symbol: selectedSellItem.symbol,
-        quantity: sellQuantity,
-        price: selectedSellItem.marketPrice, // Ban theo gtt
-      });
+      if (orderType === "MARKET") {
+        const res = await axiosClient.post("/users/sell", {
+          symbol: selectedSellItem.symbol,
+          quantity: sellQuantity,
+          price: selectedSellItem.marketPrice, // Ban theo gtt
+        });
 
-      message.success(
-        `Ban thanh cong. So du con lai: ${res.data.currentBalance.toLocaleString()} VND`
-      );
+        message.success(
+          `Bán ngay thành công. Số dư còn lại: ${res.data.currentBalance.toLocaleString()} VND`
+        );
+      } else {
+        if (targetPrice <= 0) {
+          message.error("Vui lòng nhập giá mong muốn bán hợp lệ!");
+        }
+
+        await axiosClient.post("/orders/place", {
+          symbol: selectedSellItem.symbol,
+          direction: "SELL",
+          quantity: sellQuantity,
+          targetPrice: targetPrice, // Gtt lên cao - khớp mới bán
+        });
+        message.success(`Đã đặt lệnh chờ bán thành công`);
+      }
 
       setIsSellModalOpen(false);
       setRefreshKey((prev) => !prev);
     } catch (error) {
       message.error(`That bai: ${error.res?.data?.message || "Loi he thong"}`);
     }
-  };
-
-  const handleSellCancel = () => {
-    setIsSellModalOpen(false);
   };
 
   const handleLogOut = () => {
@@ -182,6 +211,16 @@ function App() {
     }
   };
 
+  const fetchMyOrders = async () => {
+    try {
+      const res = await axiosClient.get("/orders/my-orders");
+      setMyOrders(res.data);
+      setIsOrdersDrawerOpen(true);
+    } catch {
+      message.error("Lỗi tải danh sách lệnh");
+    }
+  };
+
   // Logic tinh toan danh muc
   // Portfolio lay tu API chi co gia von. Can map voi gtt (stocks) de tinh lai lo
   const portfolioData = userInfo?.portfolio?.map((item) => {
@@ -208,9 +247,10 @@ function App() {
 
   const columns = [
     {
-      title: "Mã CK",
+      title: "Mã Chứng Khoán",
       dataIndex: "symbol",
       key: "symbol",
+      align: "center",
       render: (text) => (
         <Tag color="blue" style={{ fontSize: 16 }}>
           {text}
@@ -218,9 +258,10 @@ function App() {
       ), //chinh sua cach hien thi
     },
     {
-      title: "Gia Thi Truong",
+      title: "Giá Thị Trường",
       dataIndex: "price",
       key: "price",
+      align: "center",
       render: (price) => {
         return (
           <Text strong style={{ fontSize: 16, color: "green" }}>
@@ -230,8 +271,9 @@ function App() {
       },
     },
     {
-      title: "Bien dong",
+      title: "Biến Động",
       key: "change",
+      align: "center",
       render: (_, record) => {
         const isUp = record.price > 50;
 
@@ -244,8 +286,9 @@ function App() {
       },
     },
     {
-      title: "Hanh dong",
+      title: "Hành Đng",
       key: "action",
+      align: "center",
       render: (_, record) => (
         <Button
           type="primary"
@@ -351,6 +394,37 @@ function App() {
     },
   ];
 
+  const OrderColumns = [
+    {
+      title: "Thời gian",
+      dataIndex: "createdAt",
+      render: (d) => new Date(d).toLocaleString("vi-VN"),
+    },
+    { title: "Mã", dataIndex: "symbol", render: (t) => <b>{t}</b> },
+    {
+      title: "Loại",
+      dataIndex: "direction",
+      render: (t) => <Tag color={t === "BUY" ? "blue" : "volcano"}>{t}</Tag>,
+    },
+    { title: "SL", dataIndex: "quantity" },
+    {
+      title: "Giá đặt",
+      dataIndex: "targetPrice",
+      render: (p) => Number(p).toLocaleString(),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      render: (s) => {
+        let color = "default";
+        if (s === "MATCHED") color = "success";
+        if (s === "PENDING") color = "processing";
+        if (s === "CANCELLED") color = "error";
+        return <Tag color={color}>{s}</Tag>;
+      },
+    },
+  ];
+
   // Dropdown
   const userMenu = {
     items: [
@@ -371,21 +445,7 @@ function App() {
   }
 
   if (isAppLoading) {
-    return (
-      <div
-        style={{
-          height: "100vh",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          background: "#f0f2f5",
-        }}
-      >
-        <Spin tip="Loading..." size="large">
-          <div style={{ height: "100vh" }}></div>
-        </Spin>
-      </div>
-    );
+    return <Spin fullscreen tip="Loading..." size="large" />;
   }
 
   return (
@@ -435,15 +495,23 @@ function App() {
       </Header>
 
       {/* 2. CONTENT */}
-      <Content style={{ padding: "30px 50px" }}>
+      <Content
+        style={{
+          padding: "16px 8px",
+          width: "100%",
+          maxWidth: "100%",
+          boxSizing: "border-box",
+        }}
+      >
         <div
           style={{
-            maxWidth: 1200,
+            maxWidth: "1400px", // Giới hạn max width cho desktop
             margin: "0 auto",
+            width: "100%",
           }}
         >
           <Row gutter={16} style={{ marginBottom: 20 }}>
-            <Col span={10}>
+            <Col xs={24} md={10}>
               <Card
                 style={{
                   height: "100%",
@@ -466,7 +534,7 @@ function App() {
                 />
               </Card>
             </Col>
-            <Col span={14}>
+            <Col xs={24} md={14}>
               <Card
                 style={{
                   height: "100%",
@@ -493,6 +561,13 @@ function App() {
                   >
                     Lịch sử Giao Dịch
                   </Button>
+                  <Button
+                    size="large"
+                    icon={<OrderedListOutlined />}
+                    onClick={fetchMyOrders}
+                  >
+                    Sổ Lệnh
+                  </Button>
                 </Space>
               </Card>
             </Col>
@@ -511,9 +586,14 @@ function App() {
             </span>
           }
           variant="false"
-          style={{ marginTop: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+          style={{
+            marginTop: 20,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            textAlign: "center",
+          }}
         >
           <Table
+            scroll={{ x: "max-content" }}
             dataSource={stocks}
             columns={columns}
             rowKey="symbol"
@@ -522,45 +602,85 @@ function App() {
           />
         </Card>
         <Modal
-          title={`Dat lenh MUA: ${selectedBuyStock?.symbol}`}
+          title={`Đặt Lệnh Mua: ${selectedBuyStock?.symbol}`}
           open={isBuyModalOpen}
           onOk={handleBuyOk}
-          onCancel={handleBuyCancel}
-          okText="Xac nhan mua"
-          cancelText="Huy"
+          onCancel={() => setIsBuyModalOpen(false)}
+          okText={orderType === "MARKET" ? "Mua Ngay" : "Đặt Lệnh Chờ"}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <Alert
-              title={`Giá thị trường: ${selectedBuyStock?.price}`}
-              type="info"
-              showIcon
-            />
-            <div>
-              <span>So luong mua: </span>
-              <InputNumber
-                min={10}
-                max={10000}
-                defaultValue={100}
-                value={buyQuantity}
-                onChange={(value) => setBuyQuantity(value)}
-                style={{ width: "100%" }}
-              />
-            </div>
+          <Tabs
+            defaultActiveKey="MARKET"
+            onChange={(key) => {
+              setOrderType(key);
+              if (key === "LIMIT") setTargetPrice(selectedBuyStock?.price); // Đổi tab limit => điền sẵn giá mong muốn = gtt hiện tại
+            }}
+            items={[
+              {
+                key: "MARKET",
+                label: "Lệnh Thị Trường (Market Price)",
+                children: (
+                  <Space orientation="vertical" style={{ width: "100%" }}>
+                    <Alert
+                      title="Lệnh sẽ khớp ngay lập tức với giá hiện tại"
+                      type="warning"
+                      showIcon
+                    />
+                    <div>
+                      <InputNumber
+                        min={10}
+                        value={buyQuantity}
+                        onChange={setBuyQuantity}
+                        style={{ width: "100%" }}
+                      />
+                      <div style={{ textAlign: "right", marginTop: 10 }}>
+                        <Text>Tổng tiền dự kiến: </Text>
+                        <Text strong style={{ color: "#1890ff", fontSize: 16 }}>
+                          {(
+                            selectedBuyStock?.price * buyQuantity
+                          ).toLocaleString()}{" "}
+                          VND
+                        </Text>
+                      </div>
+                    </div>
+                  </Space>
+                ),
+              },
+              {
+                key: "LIMIT",
+                label: "Lệnh Giới Hạn (Limit Order)",
+                children: (
+                  <Space orientation="vertical" style={{ width: "100%" }}>
+                    <Alert
+                      title="Lệnh chỉ khớp khi giá thị trường CHẠM mức giá bạn đặt"
+                      type="info"
+                      showIcon
+                    />
 
-            <Divider style={{ margin: "5px 0" }} />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Text> Tổng thanh toán: </Text>
-              <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
-                {(selectedBuyStock?.price * buyQuantity).toLocaleString()} VND
-              </Title>
-            </div>
-          </div>
+                    <div style={{ marginTop: 10 }}>
+                      <Text>Giá muốn mua (Target Price): </Text>
+                      <InputNumber
+                        style={{ width: "100%" }}
+                        value={targetPrice}
+                        onChange={setTargetPrice}
+                      />
+                    </div>
+                    <InputNumber
+                      min={10}
+                      value={buyQuantity}
+                      onChange={setBuyQuantity}
+                      style={{ width: "100%" }}
+                    />
+                    <div style={{ textAlign: "right", marginTop: 10 }}>
+                      <Text>Tổng tiền dự kiến: </Text>
+                      <Text strong style={{ color: "#1890ff", fontSize: 16 }}>
+                        {(targetPrice * buyQuantity).toLocaleString()} VND
+                      </Text>
+                    </div>
+                  </Space>
+                ),
+              },
+            ]}
+          />
         </Modal>
         <Drawer
           title="Danh Mục Đầu Tư (My Portfolio)"
@@ -577,10 +697,10 @@ function App() {
           />
         </Drawer>
         <Modal
-          title={`Dat lenh BAN: ${selectedSellItem?.symbol}`}
+          title={`Đặt Lệnh Bán: ${selectedSellItem?.symbol}`}
           open={isSellModalOpen}
           onOk={handleSellOk}
-          onCancel={handleSellCancel}
+          onCancel={() => setIsSellModalOpen(false)}
           okText="Xac nhan ban"
           cancelText="Huy"
         >
@@ -657,6 +777,20 @@ function App() {
           <Table
             dataSource={historyData}
             columns={historyColumns}
+            rowKey="id"
+            pagination={{ pageSize: 10 }}
+          ></Table>
+        </Drawer>
+        <Drawer
+          title="Sổ Lệnh (Order Book)"
+          placement="right"
+          size={600}
+          onClose={() => setIsOrdersDrawerOpen(false)}
+          open={isOrdersDrawerOpen}
+        >
+          <Table
+            dataSource={myOrders}
+            columns={OrderColumns}
             rowKey="id"
             pagination={{ pageSize: 10 }}
           ></Table>
