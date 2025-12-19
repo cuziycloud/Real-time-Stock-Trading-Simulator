@@ -165,6 +165,54 @@ export class UsersService {
     });
   }
 
+  async deposit(userId: number, amount: number) {
+    if (amount <= 0)
+      throw new BadRequestException('Số tiền nạp phải lớn hơn 0');
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) throw new BadRequestException('Không tìm thấy user');
+
+    // Cộng tiền
+    user.balance = Number(user.balance) + amount;
+    await this.userRepository.save(user);
+
+    // Lưu lịch sử
+    await this.transactionRepository.save({
+      user: user,
+      symbol: 'VND',
+      type: 'DEPOSIT',
+      price: amount,
+      total: amount,
+    });
+
+    return { message: 'Nạp tiền thành công', newBalance: user.balance };
+  }
+
+  async withdraw(userId: number, amount: number) {
+    if (amount <= 0)
+      throw new BadRequestException('Số tiền rút phải lớn hơn 0');
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) throw new BadRequestException('Không tìm thấy người dùng');
+
+    // Trừ tiền
+    user.balance = Number(user.balance) - amount;
+    await this.userRepository.save(user);
+
+    // Lưu lịch sử
+    await this.transactionRepository.save({
+      user: user,
+      symbol: 'VND',
+      type: 'WITHDRAW',
+      price: amount,
+      total: amount,
+    });
+
+    return { message: 'Rút tiền thành công', newBalance: user.balance };
+  }
+
   async create(createUserDto: CreateUserDto) {
     const newUser = this.userRepository.create(createUserDto);
     return this.userRepository.save(newUser);

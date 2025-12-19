@@ -12,17 +12,17 @@ export class Transaction {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ nullable: true })
   symbol: string;
 
-  @Column({ type: 'enum', enum: ['BUY', 'SELL'] })
+  @Column({ type: 'enum', enum: ['BUY', 'SELL', 'DEPOSIT', 'WITHDRAW'] })
   type: string;
 
-  @Column('int')
+  @Column('int', { default: 1 }) // Mặc định 1 (lần) nếu nạp/rút
   quantity: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
-  price: number; //Gia tai thoi diem giao dịch
+  @Column('decimal', { precision: 15, scale: 2 })
+  price: number; //Gia tai thoi diem giao dịch/ Số tiền nạp/rút
 
   @Column('decimal', { precision: 15, scale: 2, nullable: true })
   total: number; //Tong tien = price * quantity

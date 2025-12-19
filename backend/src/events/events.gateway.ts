@@ -33,6 +33,7 @@ export class EventsGateway implements OnGatewayInit {
     const roomName = `user-${userId}`;
     await client.join(roomName);
     console.log(`User ${userId} đã vào phòng: ${roomName}`);
+    //console.log(`Client ${client.id} đã vào phòng: ${roomName}`);
   }
   afterInit(server: Server) {
     console.log('Socket Gateway khởi động');

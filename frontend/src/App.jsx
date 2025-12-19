@@ -35,6 +35,8 @@ import {
   LogoutOutlined,
   DownOutlined,
   OrderedListOutlined,
+  PlusCircleOutlined,
+  MinusCircleOutlined,
 } from "@ant-design/icons";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 import axiosClient from "./services/axios-client";
@@ -69,6 +71,10 @@ function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false); // Drawer Portfolio
   const [isHistoryOpen, setIsHistoryOpen] = useState(false); // Drawer Lịch sử
 
+  const [isBankingModalOpen, setIsBankingModalOpen] = useState(false);
+  const [bankingType, setBankingType] = useState(""); // DEPOST - WITHDRAW
+  const [bankingAmount, setBankingAmount] = useState(100000);
+
   const [refreshKey, setRefreshKey] = useState(false); // Chay lai useEffect - fetchUserInfo
 
   useEffect(() => {
@@ -96,6 +102,43 @@ function App() {
       isMounted = false;
     };
   }, [refreshKey, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !userInfo) return; // Cần userInfo để biết ID mà join room
+    console.log("Dang ket noi...");
+
+    const socket = io("http://localhost:3000");
+
+    // 1. Join room khi vừa kết nối
+    socket.on("connect", () => {
+      // Gửi ID của mình lên để BE nhốt vào phòng
+      socket.emit("join-room", userInfo.id);
+    });
+
+    // 2. Lắng nghe sk khớp lệnh
+    socket.on("order-matched", (data) => {
+      notification.success({
+        title: "Khớp Lệnh Thành Công",
+        description: `${data.message} (SL: ${data.quantity} - Giá: ${data.price})`,
+        placement: "topRight",
+        duration: 4,
+      });
+      // Tự động reload lại
+      setRefreshKey((prev) => !prev);
+
+      fetchMyOrders();
+    });
+
+    // 3. Lắng nghe gtt
+    socket.on("market-update", (dataTuServerGuive) => {
+      console.log("Nhan duoc gia moi: ", dataTuServerGuive);
+
+      setStocks(dataTuServerGuive);
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, [isAuthenticated, userInfo]);
 
   const showBuyModal = (stockRecord) => {
     setSelectedBuyStock(stockRecord);
@@ -187,42 +230,39 @@ function App() {
     message.info("Đăng xuất thành công");
   };
 
-  useEffect(() => {
-    if (!isAuthenticated || !userInfo) return; // Cần userInfo để biết ID mà join room
-    console.log("Dang ket noi...");
+  // Nạp/ Rút
+  const handleDeposit = async () => {
+    try {
+      await axiosClient.post("users/deposit", { amount: bankingAmount });
+      message.success(`Nạp thành công ${bankingAmount.toLocaleString()} VND`);
 
-    const socket = io("http://localhost:3000");
-
-    // 1. Join room khi vừa kết nối
-    socket.on("connect", () => {
-      // Gửi ID của mình lên để BE nhốt vào phòng
-      socket.emit("join-room", userInfo.id);
-    });
-
-    // 2. Lắng nghe sk khớp lệnh
-    socket.on("order-matched", (data) => {
-      notification.success({
-        title: "Khớp Lệnh Thành Công",
-        description: `${data.message} (SL: ${data.quantity} - Giá: ${data.price})`,
-        placement: "topRight",
-        duration: 4,
-      });
-      // Tự động reload lại
+      setIsBankingModalOpen(false);
       setRefreshKey((prev) => !prev);
+    } catch (error) {
+      message.error(error.respone?.data?.message || "Lỗi nạp tiền");
+    }
+  };
 
-      fetchMyOrders();
-    });
+  const handleWithdraw = async () => {
+    try {
+      await axiosClient.post("users/withdraw", { amount: bankingAmount });
+      message.success(`Rút thành công ${bankingAmount.toLocaleString()} VND`);
 
-    // 3. Lắng nghe gtt
-    socket.on("market-update", (dataTuServerGuive) => {
-      console.log("Nhan duoc gia moi: ", dataTuServerGuive);
+      setIsBankingModalOpen(false);
+      setRefreshKey((prev) => !prev);
+    } catch (error) {
+      message.error(error.respone?.data?.message || "Lỗi rút tiền");
+    }
+  };
 
-      setStocks(dataTuServerGuive);
-    });
-    return () => {
-      socket.disconnect();
-    };
-  }, [isAuthenticated, userInfo]);
+  // Hàm điều phối do nạp/ rút chung modal
+  const onBankingSubmit = () => {
+    if (bankingType === "DEPOSIT") {
+      handleDeposit();
+    } else {
+      handleWithdraw();
+    }
+  };
 
   const fetchTradeHistory = async () => {
     try {
@@ -555,6 +595,28 @@ function App() {
                     fontWeight: "bold",
                   }}
                 />
+                <div style={{ marginTop: 15, display: "flex", gap: 10 }}>
+                  <Button
+                    type="primary"
+                    icon={<PlusCircleOutlined />}
+                    onClick={() => {
+                      setBankingType("DEPOSIT"), setIsBankingModalOpen(true);
+                    }}
+                  >
+                    {" "}
+                    Nạp{" "}
+                  </Button>
+                  <Button
+                    danger
+                    icon={<MinusCircleOutlined />}
+                    onClick={() => {
+                      setBankingType("WITHDRAW"), setIsBankingModalOpen(true);
+                    }}
+                  >
+                    {" "}
+                    Rút{" "}
+                  </Button>
+                </div>
               </Card>
             </Col>
             <Col xs={24} md={14}>
@@ -624,6 +686,8 @@ function App() {
             bordered
           />
         </Card>
+
+        {/* Modal */}
         <Modal
           title={`Đặt Lệnh Mua: ${selectedBuyStock?.symbol}`}
           open={isBuyModalOpen}
@@ -705,20 +769,6 @@ function App() {
             ]}
           />
         </Modal>
-        <Drawer
-          title="Danh Mục Đầu Tư (My Portfolio)"
-          placement="right"
-          size={600}
-          onClose={() => setIsDrawerOpen(false)}
-          open={isDrawerOpen}
-        >
-          <Table
-            dataSource={portfolioData}
-            columns={portfolioColumns}
-            rowKey="id"
-            pagination={false}
-          />
-        </Drawer>
         <Modal
           title={`Đặt Lệnh Bán: ${selectedSellItem?.symbol}`}
           open={isSellModalOpen}
@@ -790,6 +840,71 @@ function App() {
             </div>
           </div>
         </Modal>
+        <Modal
+          title={
+            bankingType === "DEPOSIT"
+              ? "Nạp Tiền Vào Tài Khoản"
+              : "Rút Tiền Về Ngân Hàng"
+          }
+          open={isBankingModalOpen}
+          onOk={onBankingSubmit}
+          onCancel={() => setIsBankingModalOpen(false)}
+          okText="Xác Nhận"
+          okButtonProps={{ danger: bankingType === "WITHDRAW" }}
+        >
+          <Space orientation="vertical" style={{ width: "100%" }}>
+            <Alert
+              title={
+                bankingType === "DEPOSIT"
+                  ? "Tiền sẽ được cộng ngay vào tài khoản"
+                  : "Tiền sẽ bị trừ khỏi tài khoản ngay lập tức"
+              }
+              type={bankingType === "DEPOSIT" ? "success" : "warning"}
+              showIcon
+            />
+
+            <div style={{marginTop: 10}}>
+              <Text>Nhập số tiền: </Text>
+              <InputNumber
+                style={{width: '100%'}}
+                size="large"
+                value={bankingAmount}
+                onChange={setBankingAmount}
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
+                min={10000}
+              />
+            </div>
+            <Space wrap>
+              {[50000, 100000, 200000, 500000].map(amt => (
+                <Tag
+                color='blue'
+                style={{cursor: 'pointer'}}
+                onClick={() => setBankingAmount(amt)}
+                key={amt}
+                >
+                  +{amt.toLocaleString()}
+                </Tag>
+              ))}
+            </Space>
+          </Space>
+        </Modal>
+
+        {/* Drawer */}
+        <Drawer
+          title="Danh Mục Đầu Tư (My Portfolio)"
+          placement="right"
+          size={600}
+          onClose={() => setIsDrawerOpen(false)}
+          open={isDrawerOpen}
+        >
+          <Table
+            dataSource={portfolioData}
+            columns={portfolioColumns}
+            rowKey="id"
+            pagination={false}
+          />
+        </Drawer>
         <Drawer
           title="Lịch Sử Giao Dịch"
           placement="left"
