@@ -22,6 +22,7 @@ import {
   Spin,
   Tabs,
   notification,
+  Tooltip,
 } from "antd";
 import {
   UserOutlined,
@@ -38,10 +39,12 @@ import {
   PlusCircleOutlined,
   MinusCircleOutlined,
   TrophyOutlined,
+  LineChartOutlined,
 } from "@ant-design/icons";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 import axiosClient from "./services/axios-client";
 import LoginPage from "./components/LoginPage";
+import StockChartModal from "./components/StockChartModal";
 
 const { Title, Text } = Typography;
 
@@ -78,6 +81,9 @@ function App() {
 
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState([]);
+
+  const [isChartModalOpen, setIsChartModalOpen] = useState(false);
+  const [chartStock, setChartStock] = useState(null); // Mã CK đang được chọn => xem biểu đồ tương ứng
 
   const [refreshKey, setRefreshKey] = useState(false); // Chay lai useEffect - fetchUserInfo
 
@@ -144,6 +150,24 @@ function App() {
     };
   }, [isAuthenticated, userInfo]);
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const vnpStatus = urlParams.get("vnp_status");
+
+    if (vnpStatus) {
+      window.history.replaceState({}, document.title, "/");
+      if (vnpStatus === "success") {
+         message.success("Nạp tiền VNPAY thành công");
+
+        setTimeout(() => {
+          setRefreshKey((prev) => !prev);
+        }, 500);
+      } else if (vnpStatus === "fail") {
+        message.error("Giao dịch VNPAY thất bại hoặc bị hủy.");
+      }
+    } 
+  }, []);
+
   const fetchLeaderboard = async () => {
     try {
       const res = await axiosClient.get("users/leaderboard");
@@ -152,6 +176,11 @@ function App() {
     } catch {
       message.error("Lỗi tải bảng xếp hạng");
     }
+  };
+
+  const showChart = (stockRecord) => {
+    setChartStock(stockRecord);
+    setIsChartModalOpen(true);
   };
 
   const showBuyModal = (stockRecord) => {
@@ -247,11 +276,12 @@ function App() {
   // Nạp/ Rút
   const handleDeposit = async () => {
     try {
-      await axiosClient.post("users/deposit", { amount: bankingAmount });
-      message.success(`Nạp thành công ${bankingAmount.toLocaleString()} VND`);
+      const res = await axiosClient.post("/payment/create_url", { amount: bankingAmount });
 
-      setIsBankingModalOpen(false);
-      setRefreshKey((prev) => !prev);
+      // Chuyển hướng
+      if(res.data.url) {
+        window.location.href = res.data.url;
+      }
     } catch (error) {
       message.error(error.respone?.data?.message || "Lỗi nạp tiền");
     }
@@ -363,17 +393,26 @@ function App() {
       },
     },
     {
-      title: "Hành Đng",
+      title: "Hành Động",
       key: "action",
       align: "center",
       render: (_, record) => (
-        <Button
-          type="primary"
-          size="medium"
-          onClick={() => showBuyModal(record)}
-        >
-          Mua ngay
-        </Button>
+        <Space>
+          <Tooltip>
+            <Button
+              icon={<LineChartOutlined />}
+              onClick={() => showChart(record)}
+            ></Button>
+          </Tooltip>
+
+          <Button
+            type="primary"
+            size="medium"
+            onClick={() => showBuyModal(record)}
+          >
+            Mua ngay
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -952,11 +991,7 @@ function App() {
           </Space>
         </Modal>
         <Modal
-          title={
-            <span>
-              Bảng Xếp Hạng
-            </span>
-          }
+          title={<span>Bảng Xếp Hạng</span>}
           open={isLeaderboardOpen}
           onCancel={() => setIsLeaderboardOpen(false)}
           footer={null}
@@ -969,6 +1004,15 @@ function App() {
             rowKey="id"
           />
         </Modal>
+
+        {isChartModalOpen && (
+          <StockChartModal
+            open={isChartModalOpen}
+            onClose={() => setIsChartModalOpen(false)}
+            stockSymbol={chartStock?.symbol}
+            currentPrice={chartStock?.price}
+          />
+        )}
         {/* Drawer */}
         <Drawer
           title="Danh Mục Đầu Tư (My Portfolio)"

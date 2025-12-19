@@ -35,14 +35,15 @@ export class EventsGateway implements OnGatewayInit {
 
     setInterval(() => {
       void this.handleMarketFluctuation();
-    }, 5000);
+    }, 10000);
   }
 
   async handleMarketFluctuation() {
     const newStocks = this.marketService.updateMarketPrices();
     //const marketData: StockPriceDto[] = this.stocks;
 
-    this.server.emit('market-update', newStocks);
+    this.server.emit('market-update', newStocks); // Gửi giá mới cho FE
+    // Matching Engine
     try {
       const matchOrders = await this.ordersService.matchOrders(newStocks);
       if (matchOrders.length > 0) {
