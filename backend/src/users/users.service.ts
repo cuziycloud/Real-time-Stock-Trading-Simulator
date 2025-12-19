@@ -7,6 +7,7 @@ import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { TradeStockDto } from './dto/trade-stock.dto';
 import { Transaction } from './entities/transaction.entity';
+import { MarketService } from 'src/market/market.service';
 
 @Injectable()
 export class UsersService {
@@ -17,6 +18,7 @@ export class UsersService {
     private portfolioRepository: Repository<Portfolio>,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
+    private marketService: MarketService,
   ) {}
 
   async createMockUser() {
@@ -211,6 +213,38 @@ export class UsersService {
     });
 
     return { message: 'Rút tiền thành công', newBalance: user.balance };
+  }
+
+  async getLeaderboard() {
+    const users = await this.userRepository.find({ relations: ['portfolio'] });
+
+    const currentPrices = this.marketService.getCurrentPrices();
+
+    const leaderboard = users.map((user) => {
+      let stockValue = 0;
+
+      user.portfolio.forEach((item) => {
+        const stock = currentPrices.find((s) => s.symbol === item.symbol);
+        if (stock) {
+          stockValue += Number(item.quantity) * stock.price;
+        }
+      });
+
+      const totalNetWorth = Number(user.balance) + stockValue;
+
+      return {
+        id: user.id,
+        username: this.maskUsername(user.username),
+        totalNetWorth: totalNetWorth, // Tổng tài sản
+      };
+    });
+
+    return leaderboard.sort((a, b) => b.totalNetWorth - a.totalNetWorth);
+  }
+
+  private maskUsername(username: string): string {
+    if (username.length <= 3) return username;
+    return username.substring(0, 2) + '***' + username.slice(-2);
   }
 
   async create(createUserDto: CreateUserDto) {

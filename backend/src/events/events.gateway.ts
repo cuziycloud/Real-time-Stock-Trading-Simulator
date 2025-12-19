@@ -7,6 +7,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { MarketService } from 'src/market/market.service';
 import { OrdersService } from 'src/orders/orders.service';
 
 @WebSocketGateway({ cors: true })
@@ -14,16 +15,10 @@ export class EventsGateway implements OnGatewayInit {
   @WebSocketServer()
   server: Server;
 
-  private stocks = [
-    { symbol: 'VIC', price: 19.5 },
-    { symbol: 'FPT', price: 70.0 },
-    { symbol: 'MWG', price: 45.0 },
-    { symbol: 'PNJ', price: 35.2 },
-    { symbol: 'VNM', price: 55.9 },
-    { symbol: 'PHS', price: 80.5 },
-  ];
-
-  constructor(private ordersService: OrdersService) {}
+  constructor(
+    private ordersService: OrdersService,
+    private marketService: MarketService,
+  ) {}
 
   @SubscribeMessage('join-room')
   async handleJoinRoom(
@@ -44,19 +39,12 @@ export class EventsGateway implements OnGatewayInit {
   }
 
   async handleMarketFluctuation() {
-    // duyet qua tung ma, tang/giam ngau nhien
-    this.stocks = this.stocks.map((s) => {
-      const change = Math.random() * 1 - 0.5; //rd từ -0.5 => 0.5
-      return {
-        ...s,
-        price: Number((s.price + change).toFixed(2)), // tron 2 so le
-      };
-    });
+    const newStocks = this.marketService.updateMarketPrices();
     //const marketData: StockPriceDto[] = this.stocks;
 
-    this.server.emit('market-update', this.stocks);
+    this.server.emit('market-update', newStocks);
     try {
-      const matchOrders = await this.ordersService.matchOrders(this.stocks);
+      const matchOrders = await this.ordersService.matchOrders(newStocks);
       if (matchOrders.length > 0) {
         matchOrders.forEach((order) => {
           const roomName = `user-${order.user.id}`;

@@ -37,6 +37,7 @@ import {
   OrderedListOutlined,
   PlusCircleOutlined,
   MinusCircleOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
 import { Content, Footer, Header } from "antd/es/layout/layout";
 import axiosClient from "./services/axios-client";
@@ -74,6 +75,9 @@ function App() {
   const [isBankingModalOpen, setIsBankingModalOpen] = useState(false);
   const [bankingType, setBankingType] = useState(""); // DEPOST - WITHDRAW
   const [bankingAmount, setBankingAmount] = useState(100000);
+
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+  const [leaderboardData, setLeaderboardData] = useState([]);
 
   const [refreshKey, setRefreshKey] = useState(false); // Chay lai useEffect - fetchUserInfo
 
@@ -139,6 +143,16 @@ function App() {
       socket.disconnect();
     };
   }, [isAuthenticated, userInfo]);
+
+  const fetchLeaderboard = async () => {
+    try {
+      const res = await axiosClient.get("users/leaderboard");
+      setLeaderboardData(res.data);
+      setIsLeaderboardOpen(true);
+    } catch {
+      message.error("Lỗi tải bảng xếp hạng");
+    }
+  };
 
   const showBuyModal = (stockRecord) => {
     setSelectedBuyStock(stockRecord);
@@ -488,6 +502,44 @@ function App() {
     },
   ];
 
+  const leaderboardColumns = [
+    {
+      title: "Hạng",
+      key: "rank",
+      render: (_, __, index) => {
+        // Top 1, 2, 3 có icon huy chương
+        if (index === 0) return <span style={{ fontSize: 20 }}>🥇</span>;
+        if (index === 1) return <span style={{ fontSize: 20 }}>🥈</span>;
+        if (index === 2) return <span style={{ fontSize: 20 }}>🥉</span>;
+        return <Tag>{index + 1}</Tag>;
+      },
+    },
+    {
+      title: "Nhà đầu tư",
+      dataIndex: "username",
+      render: (name, record) => (
+        <span>
+          <Avatar
+            style={{ backgroundColor: "#87d068", marginRight: 8 }}
+            icon={<UserOutlined />}
+          />
+          {name} {record.id === userInfo?.id && <Tag color="blue">Bạn</Tag>}
+        </span>
+      ),
+    },
+    {
+      title: "Tổng Tài Sản",
+      dataIndex: "totalNetWorth",
+      render: (v) => (
+        <Text strong style={{ color: "#cf1322", fontSize: 16 }}>
+          {Number(v).toLocaleString()}
+        </Text>
+      ),
+      sorter: (a, b) => a.totalNetWorth - b.totalNetWorth,
+      defaultSortOrder: "descend",
+    },
+  ];
+
   // Dropdown
   const userMenu = {
     items: [
@@ -535,7 +587,15 @@ function App() {
         >
           <StockOutlined /> Stock Simulator
         </div>
-        {/* Ben trai: Ten + Ava (dropdown) */}
+        {/* Ben phai: Ten + Ava (dropdown) */}
+        <Button
+          type="text"
+          icon={<TrophyOutlined style={{ color: "gold", fontSize: 20 }} />}
+          onClick={fetchLeaderboard}
+          style={{ color: "white" }}
+        >
+          Top Trader
+        </Button>
         <Dropdown menu={userMenu} placement="bottomRight" arrow>
           <div
             style={{
@@ -863,25 +923,27 @@ function App() {
               showIcon
             />
 
-            <div style={{marginTop: 10}}>
+            <div style={{ marginTop: 10 }}>
               <Text>Nhập số tiền: </Text>
               <InputNumber
-                style={{width: '100%'}}
+                style={{ width: "100%" }}
                 size="large"
                 value={bankingAmount}
                 onChange={setBankingAmount}
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => value?.replace(/\$\s?|(,*)/g, "")}
                 min={10000}
               />
             </div>
             <Space wrap>
-              {[50000, 100000, 200000, 500000].map(amt => (
+              {[50000, 100000, 200000, 500000].map((amt) => (
                 <Tag
-                color='blue'
-                style={{cursor: 'pointer'}}
-                onClick={() => setBankingAmount(amt)}
-                key={amt}
+                  color="blue"
+                  style={{ cursor: "pointer" }}
+                  onClick={() => setBankingAmount(amt)}
+                  key={amt}
                 >
                   +{amt.toLocaleString()}
                 </Tag>
@@ -889,7 +951,24 @@ function App() {
             </Space>
           </Space>
         </Modal>
-
+        <Modal
+          title={
+            <span>
+              Bảng Xếp Hạng
+            </span>
+          }
+          open={isLeaderboardOpen}
+          onCancel={() => setIsLeaderboardOpen(false)}
+          footer={null}
+          width={800}
+        >
+          <Table
+            dataSource={leaderboardData}
+            columns={leaderboardColumns}
+            pagination={false}
+            rowKey="id"
+          />
+        </Modal>
         {/* Drawer */}
         <Drawer
           title="Danh Mục Đầu Tư (My Portfolio)"

@@ -43,7 +43,8 @@ export class UsersController {
 
   @UseGuards(AuthGuard('jwt'))
   @Post('deposit')
-  deposit(@Body('amount') amount: number, @GetUser('id') userId: number) { // #Dùng dto để kiểm soát dl input
+  deposit(@Body('amount') amount: number, @GetUser('id') userId: number) {
+    // #Dùng dto để kiểm soát dl input
     return this.usersService.deposit(userId, amount);
   }
 
@@ -51,6 +52,11 @@ export class UsersController {
   @Post('withdraw')
   withdraw(@Body('amount') amount: number, @GetUser('id') userId: number) {
     return this.usersService.withdraw(userId, amount);
+  }
+
+  @Get('leaderboard')
+  getLeaderboard() {
+    return this.usersService.getLeaderboard();
   }
 
   @Get()
