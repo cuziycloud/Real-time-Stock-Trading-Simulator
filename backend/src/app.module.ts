@@ -7,6 +7,8 @@ import { EventsGateway } from './events/events.gateway';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { OrdersModule } from './orders/orders.module';
+import { MarketModule } from './market/market.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { OrdersModule } from './orders/orders.module';
     UsersModule,
     AuthModule,
     OrdersModule,
+    MarketModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService, EventsGateway],

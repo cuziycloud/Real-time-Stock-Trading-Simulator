@@ -11,7 +11,7 @@ import { TradeStockDto } from 'src/users/dto/trade-stock.dto';
 export class OrdersService {
   constructor(
     @InjectRepository(Order)
-    private orderRepositoty: Repository<Order>,
+    private orderRepository: Repository<Order>,
     private userService: UsersService,
   ) {}
 
@@ -22,38 +22,36 @@ export class OrdersService {
 
     // Check số dư => tiền tạm ứng (Coming...)
 
-    const newOrder = this.orderRepositoty.create({
+    const newOrder = this.orderRepository.create({
       ...dto,
       user: user,
       status: OrderStatus.PENDING,
     });
 
-    return await this.orderRepositoty.save(newOrder);
+    return await this.orderRepository.save(newOrder);
   }
 
   // 2. Lấy danh sách lệnh của user
   async getMyOrder(userId: number) {
-    return this.orderRepositoty.find({
+    return this.orderRepository.find({
       where: { user: { id: userId } },
       order: { createdAt: 'DESC' },
     });
   }
 
   // 3. Hàm match lệnh (Gtt thay đổi - gọi hàm - quét danh sách lệnh)
-  async matchOrders(marketData: StockPriceDto[]) {
-    console.log(
-      '>>> Matching Engine đang chạy... Market Data:',
-      JSON.stringify(marketData),
-    );
+  // Return Promise<Order[]>
+  async matchOrders(marketData: StockPriceDto[]): Promise<Order[]> {
     // Lấy all lệnh pending
-    const pendingOrders = await this.orderRepositoty.find({
+    const pendingOrders = await this.orderRepository.find({
       where: { status: OrderStatus.PENDING },
       relations: ['user'],
     });
+    const matchOrders: Order[] = []; // Mảng chứa kết quả (KDL: Order)
 
-    console.log(`>>> Tìm thấy ${pendingOrders.length} lệnh PENDING`);
+    //console.log(`>>> Tìm thấy ${pendingOrders.length} lệnh PENDING`);
 
-    if (pendingOrders.length === 0) return;
+    if (pendingOrders.length === 0) return matchOrders;
 
     for (const order of pendingOrders) {
       const currentStock = marketData.find((s) => s.symbol === order.symbol);
@@ -76,12 +74,19 @@ export class OrdersService {
       }
 
       if (isMatched) {
-        await this.executeOrder(order, marketPrice);
+        const result = await this.executeOrder(order, marketPrice);
+        if (result) {
+          matchOrders.push(result);
+        }
       }
     }
+    return matchOrders;
   }
 
-  private async executeOrder(order: Order, executionPrice: number) {
+  private async executeOrder(
+    order: Order,
+    executionPrice: number,
+  ): Promise<Order | null> {
     try {
       const tradeDto: TradeStockDto = {
         symbol: order.symbol,
@@ -95,11 +100,13 @@ export class OrdersService {
       }
 
       order.status = OrderStatus.MATCHED;
-      await this.orderRepositoty.save(order);
+      const saveOrder = await this.orderRepository.save(order);
+      return saveOrder;
     } catch (error) {
       console.log(`Lỗi khớp lệnh ${order.id}: ${error}`);
       order.status = OrderStatus.CANCELLED; // Không đủ số dư
-      await this.orderRepositoty.save(order);
+      await this.orderRepository.save(order);
+      return null;
     }
   }
 }
