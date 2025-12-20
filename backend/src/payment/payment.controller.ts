@@ -3,9 +3,6 @@ import {
   Get,
   Post,
   Body,
-  Patch,
-  Param,
-  Delete,
   UseGuards,
   Req,
   Query,
@@ -13,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from 'src/auth/get-user.decorator';
 import { VnpayReturnDto } from './dto/vnpay-return.dto';
@@ -31,9 +27,9 @@ export class PaymentController {
     @Req() req: Request, // Lấy IP
   ) {
     const ipAddr =
-      (req.headers['x-forwarded-for'] as string) ||
-      req.socket.remoteAddress ||
-      '127.0.0.1';
+      (req.headers['x-forwarded-for'] as string) || //header chuẩn chứa IP Client
+      req.socket.remoteAddress || // IP proxy/ chạy local
+      '127.0.0.1'; // chạy local
 
     const url = this.paymentService.createPaymentUrl(
       dto.amount, // Lấy từ DTO
@@ -53,30 +49,5 @@ export class PaymentController {
     } else {
       return res.redirect('http://localhost:5173?vnp_status=fail');
     }
-  }
-
-  @Post()
-  create(@Body() createPaymentDto: CreatePaymentDto) {
-    return this.paymentService.create(createPaymentDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.paymentService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.paymentService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
-    return this.paymentService.update(+id, updatePaymentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.paymentService.remove(+id);
   }
 }

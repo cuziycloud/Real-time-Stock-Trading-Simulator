@@ -157,7 +157,7 @@ function App() {
     if (vnpStatus) {
       window.history.replaceState({}, document.title, "/");
       if (vnpStatus === "success") {
-         message.success("Nạp tiền VNPAY thành công");
+        message.success("Nạp tiền VNPAY thành công");
 
         setTimeout(() => {
           setRefreshKey((prev) => !prev);
@@ -165,7 +165,7 @@ function App() {
       } else if (vnpStatus === "fail") {
         message.error("Giao dịch VNPAY thất bại hoặc bị hủy.");
       }
-    } 
+    }
   }, []);
 
   const fetchLeaderboard = async () => {
@@ -276,10 +276,12 @@ function App() {
   // Nạp/ Rút
   const handleDeposit = async () => {
     try {
-      const res = await axiosClient.post("/payment/create_url", { amount: bankingAmount });
+      const res = await axiosClient.post("/payment/create_url", {
+        amount: bankingAmount,
+      });
 
       // Chuyển hướng
-      if(res.data.url) {
+      if (res.data.url) {
         window.location.href = res.data.url;
       }
     } catch (error) {
@@ -873,71 +875,81 @@ function App() {
           open={isSellModalOpen}
           onOk={handleSellOk}
           onCancel={() => setIsSellModalOpen(false)}
-          okText="Xac nhan ban"
-          cancelText="Huy"
+          okText={orderType === "MARKET" ? "Bán Ngay" : "Đặt Lệnh Chờ"}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <Alert
-              title={`Giá thị trường hiện tại: ${selectedSellItem?.marketPrice} VND`}
-              type="info"
-              showIcon
-            />
-            <Alert
-              title={`Giá vốn của bạn: ${Number(
-                selectedSellItem?.avgPrice
-              )} VND`}
-              type="info"
-              showIcon
-            />
-            <div>
-              <span>So luong ban (Max: {selectedSellItem?.quantity}): </span>
-              <InputNumber
-                min={1}
-                max={selectedSellItem?.quantity}
-                value={sellQuantity}
-                onChange={(value) => setSellQuantity(value)}
-                style={{ width: "100%" }}
-              />
-            </div>
-            <Divider style={{ margin: "5px 0" }} />
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Text>Tổng tiền thu về: </Text>
-              <Title level={4} style={{ margin: 0, color: "#008000" }}>
-                {(
-                  selectedSellItem?.marketPrice * sellQuantity
-                ).toLocaleString()}{" "}
-                VND
-              </Title>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Text>
-                {(selectedSellItem?.marketPrice - selectedSellItem?.avgPrice) *
-                  sellQuantity >=
-                0
-                  ? "Lãi dự kiến:"
-                  : "Lỗ dự kiến:"}
-              </Text>
-              <Title level={4} style={{ margin: 0, color: "#cf1322" }}>
-                {(
-                  (selectedSellItem?.marketPrice - selectedSellItem?.avgPrice) *
-                  sellQuantity
-                ).toLocaleString()}{" "}
-                VND
-              </Title>
-            </div>
-          </div>
+          <Tabs
+            defaultActiveKey="MARKET"
+            onChange={(key) => {
+              setOrderType(key);
+              if (key === "LIMIT") setTargetPrice(selectedSellItem?.marketPrice); // Đổi tab limit => điền sẵn giá mong muốn = gtt hiện tại
+            }}
+            items={[
+              {
+                key: "MARKET",
+                label: "Lệnh Thị Trường (Market Price)",
+                children: (
+                  <Space orientation="vertical" style={{ width: "100%" }}>
+                    <Alert
+                      title="Lệnh sẽ khớp ngay lập tức với giá hiện tại"
+                      type="warning"
+                      showIcon
+                    />
+                    <div>
+                      <InputNumber
+                        min={10}
+                        value={sellQuantity}
+                        onChange={setSellQuantity}
+                        style={{ width: "100%" }}
+                      />
+                      <div style={{ textAlign: "right", marginTop: 10 }}>
+                        <Text>Tổng tiền dự kiến: </Text>
+                        <Text strong style={{ color: "#1890ff", fontSize: 16 }}>
+                          {(
+                            selectedSellItem?.marketPrice * sellQuantity
+                          ).toLocaleString()}{" "}
+                          VND
+                        </Text>
+                      </div>
+                    </div>
+                  </Space>
+                ),
+              },
+              {
+                key: "LIMIT",
+                label: "Lệnh Giới Hạn (Limit Order)",
+                children: (
+                  <Space orientation="vertical" style={{ width: "100%" }}>
+                    <Alert
+                      title="Lệnh chỉ khớp khi giá thị trường CHẠM mức giá bạn đặt"
+                      type="info"
+                      showIcon
+                    />
+
+                    <div style={{ marginTop: 10 }}>
+                      <Text>Giá muốn bán (Target Price): </Text>
+                      <InputNumber
+                        style={{ width: "100%" }}
+                        value={targetPrice}
+                        onChange={setTargetPrice}
+                      />
+                    </div>
+                    <InputNumber
+                      min={10}
+                      value={sellQuantity}
+                      onChange={setSellQuantity}
+                      style={{ width: "100%" }}
+                    />
+                    <div style={{ textAlign: "right", marginTop: 10 }}>
+                      <Text>Tổng tiền dự kiến: </Text>
+                      <Text strong style={{ color: "#1890ff", fontSize: 16 }}>
+                        {(targetPrice * sellQuantity).toLocaleString()} VND
+                      </Text>
+                    </div>
+                  </Space>
+                ),
+              },
+            ]}
+          />
         </Modal>
         <Modal
           title={

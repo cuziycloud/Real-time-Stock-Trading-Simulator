@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { UsersService } from 'src/users/users.service';
 import moment from 'moment';
 import * as qs from 'qs'; // Xử lý query string
@@ -18,7 +16,7 @@ export class PaymentService {
 
   createPaymentUrl(amount: number, userId: number, ipAddr: string) {
     const date = new Date();
-    const createData = moment(date).format('YYYYMMDDHHmmss');
+    const createData = moment(date).format('YYYYMMDDHHmmss'); // Thời điểm tạo giao dịch
     const orderId = moment(date).format('DDHHmmss'); // Mã đơn hàng ngẫu nhiên => 1 mã - thanh toán 1 lần
 
     let vnp_Params: Record<string, string | number> = {};
@@ -37,13 +35,11 @@ export class PaymentService {
 
     vnp_Params = this.sortObject(vnp_Params); // Tạo chữ ký -> sắp a-z
 
-    const signData = qs.stringify(vnp_Params, { encode: false });
-    const hmac = crypto.createHmac(
-      'sha512',
-      '5A9DUYGGKS3C54Z1IUOMX7U7RILDP6JX',
-    );
-
-    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
+    // Chữ ký: Toàn bộ tham số giao dịch + secret key VNPAY cấp
+    // Quy tắc: encode thủ công + ký trên dữ liệu thô
+    const signData = qs.stringify(vnp_Params, { encode: false }); // obj thành query string, ko encode do quy tắc
+    const hmac = crypto.createHmac('sha512', this.vnp_HashSecret);
+    const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex'); // hash (crypto xài binary nên cần chuyển về bytes)
 
     vnp_Params['vnp_SecureHash'] = signed;
 
@@ -67,18 +63,15 @@ export class PaymentService {
   }
 
   async handleVnPayReturn(query: Record<string, string>) {
-    const secureHash = query.vnp_SecureHash;
+    const secureHash = query.vnp_SecureHash; // Lấy chữ ký
     const queryObj = { ...query };
-    delete queryObj['vnp_SecureHash'];
+    delete queryObj['vnp_SecureHash']; // Xóa để ký lại
     delete queryObj['vnp_SecureHashType'];
 
     const vnp_Params = this.sortObject(queryObj);
 
     const signData = qs.stringify(vnp_Params, { encode: false });
-    const hmac = crypto.createHmac(
-      'sha512',
-      '5A9DUYGGKS3C54Z1IUOMX7U7RILDP6JX',
-    );
+    const hmac = crypto.createHmac('sha512', this.vnp_HashSecret);
     const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest('hex');
 
     if (secureHash === signed) {
@@ -116,25 +109,5 @@ export class PaymentService {
     } else {
       return { code: '99', message: 'Invalid Signature' };
     }
-  }
-
-  create(createPaymentDto: CreatePaymentDto) {
-    return 'This action adds a new payment';
-  }
-
-  findAll() {
-    return `This action returns all payment`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} payment`;
-  }
-
-  update(id: number, updatePaymentDto: UpdatePaymentDto) {
-    return `This action updates a #${id} payment`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} payment`;
   }
 }
