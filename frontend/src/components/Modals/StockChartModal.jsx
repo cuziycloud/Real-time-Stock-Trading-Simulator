@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axiosClient from "../services/axios-client";
+import axiosClient from "../../services/axios-client";
 import { message, Modal, Typography, Spin } from "antd";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 

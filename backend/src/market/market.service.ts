@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 @Injectable()
 export class MarketService {
   private stocks = [
-    { symbol: 'VIC', price: 19.5 },
+    { symbol: 'VIC', price: 20.5 },
     { symbol: 'FPT', price: 70.0 },
     { symbol: 'MWG', price: 45.0 },
     { symbol: 'PNJ', price: 35.2 },
