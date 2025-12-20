@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { Ctx, Start, Update } from 'nestjs-telegraf';
+import { Ctx, InjectBot, Start, Update } from 'nestjs-telegraf';
 import { UsersService } from 'src/users/users.service';
-import { Context } from 'telegraf';
+import { Context, Telegraf } from 'telegraf';
 
 @Update() // Xử lý update từ tele
 @Injectable()
 export class TelegramService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    @InjectBot() private bot: Telegraf<Context>, // Inject bot để điều khiển
+  ) {}
 
   @Start()
   async onStart(@Ctx() ctx: Context) {
@@ -42,6 +45,16 @@ export class TelegramService {
       );
     } else {
       await ctx.reply(`Mã kết nối không hợp lệ hoặc hết hạn`);
+    }
+  }
+
+  // Hàm chủ động gửi tn
+  async sendMsg(chatId: string, msg: string) {
+    try {
+      await this.bot.telegram.sendMessage(chatId, msg);
+      return true;
+    } catch (error) {
+      console.error(`Lỗi gửi Telegram tới ${chatId}: `, error);
     }
   }
 }

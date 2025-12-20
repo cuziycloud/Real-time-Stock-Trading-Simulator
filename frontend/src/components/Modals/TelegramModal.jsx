@@ -28,6 +28,7 @@ const TelegramModal = ({ open, onClose }) => {
     }
   };
 
+  // Copy mã 
   const handleCopyCode = () => {
     if(linkData?.code) {
         navigator.clipboard.writeText(`/start ${linkData.code}`);
@@ -59,9 +60,9 @@ const TelegramModal = ({ open, onClose }) => {
              Mã kết nối: <Text code style={{ fontSize: 20 }}>{linkData?.code}</Text>
           </Title>
 
-          {/* 2. Các bước hướng dẫn */}
+          {/* 2. Hướng dẫn */}
           <Steps
-            direction="vertical"
+            orientation="vertical"
             current={-1}
             items={[
               {
@@ -102,7 +103,7 @@ const TelegramModal = ({ open, onClose }) => {
           </Space>
 
           <Alert
-            message="Bot sẽ giúp bạn nhận cảnh báo giá và biến động thị trường ngay lập tức!" 
+            title="Bot sẽ giúp bạn nhận cảnh báo giá và biến động thị trường ngay lập tức!" 
             type="info" 
             showIcon 
             style={{marginTop: 10}}

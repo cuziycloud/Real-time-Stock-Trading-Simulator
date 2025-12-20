@@ -1,34 +1,55 @@
-import { useState} from 'react';
-import { Row, Col, Layout, Spin, Card, Table, Typography, Space, Button, ConfigProvider, theme as antTheme } from 'antd';
-import { DesktopOutlined, ThunderboltFilled } from '@ant-design/icons';
+import { useState } from "react";
+import {
+  Row,
+  Col,
+  Layout,
+  Spin,
+  Card,
+  Table,
+  Typography,
+  Space,
+  Button,
+  ConfigProvider,
+  theme as antTheme,
+} from "antd";
+import {
+  BellOutlined,
+  DesktopOutlined,
+  HistoryOutlined,
+  ThunderboltFilled,
+  UnorderedListOutlined,
+} from "@ant-design/icons";
 
 // Hooks
-import { useAuth } from './hooks/useAuth';
-import { useSocket } from './hooks/useSocket';
-import { useUserData } from './hooks/useUserData';
-import { useTheme } from './hooks/useTheme';
+import { useAuth } from "./hooks/useAuth";
+import { useSocket } from "./hooks/useSocket";
+import { useUserData } from "./hooks/useUserData";
+import { useTheme } from "./hooks/useTheme";
 
 // Components
-import LoginPage from './components/LoginPage';
-import AppHeader from './components/Layout/AppHeader';
-import AppFooter from './components/Layout/AppFooter';
-import StatsCard from './components/Dashboard/StatsCard';
-import ActionButtons from './components/Dashboard/ActionButtons';
-import BuyModal from './components/Modals/BuyModal';
-import SellModal from './components/Modals/SellModal';
-import BankingModal from './components/Modals/BankingModal';
-import LeaderboardModal from './components/Modals/LeaderboardModal';
-import StockChartModal from './components/Modals/StockChartModal';
-import PortfolioDrawer from './components/Drawers/PortfolioDrawer';
-import HistoryDrawer from './components/Drawers/HistoryDrawer';
-import OrdersDrawer from './components/Drawers/OrdersDrawer';
+import LoginPage from "./components/LoginPage";
+import AppHeader from "./components/Layout/AppHeader";
+import AppFooter from "./components/Layout/AppFooter";
+import StatsCard from "./components/Dashboard/StatsCard";
+import ActionButtons from "./components/Dashboard/ActionButtons";
+import BuyModal from "./components/Modals/BuyModal";
+import SellModal from "./components/Modals/SellModal";
+import BankingModal from "./components/Modals/BankingModal";
+import LeaderboardModal from "./components/Modals/LeaderboardModal";
+import StockChartModal from "./components/Modals/StockChartModal";
+import PortfolioDrawer from "./components/Drawers/PortfolioDrawer";
+import HistoryDrawer from "./components/Drawers/HistoryDrawer";
+import OrdersDrawer from "./components/Drawers/OrdersDrawer";
 
 // Utils & Constants
-import { getStockColumns } from './constants/tableColumns';
-import { calculatePortfolioData } from './utils/calculations';
+import { getStockColumns } from "./constants/tableColumns";
+import { calculatePortfolioData } from "./utils/calculations";
 
 // Styles
-import './App.css';
+import "./App.css";
+import AlertsDrawer from "./components/Drawers/AlertsDrawer";
+import AddAlertModal from "./components/Modals/AddAlertModal";
+import TelegramModal from "./components/Modals/TelegramModal";
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -51,31 +72,39 @@ function App() {
     isAuthenticated,
     userInfo,
     (data) => setStocks(data), // onMarketUpdate
-    () => refreshUserData()     // onOrderMatched
+    () => refreshUserData() // onOrderMatched
   );
 
   // Modals
   const [buyModal, setBuyModal] = useState({ open: false, stock: null });
   const [sellModal, setSellModal] = useState({ open: false, item: null });
-  const [bankingModal, setBankingModal] = useState({ open: false, type: '' });
+  const [bankingModal, setBankingModal] = useState({ open: false, type: "" });
   const [leaderboardModal, setLeaderboardModal] = useState(false);
   const [chartModal, setChartModal] = useState({ open: false, stock: null });
+  const [telegramModal, setTelegramModal] = useState(false);
+  const [addAlertModal, setAddAlertModal] = useState({
+    open: false,
+    symbol: null,
+  });
 
   // Drawers
   const [portfolioDrawer, setPortfolioDrawer] = useState(false);
   const [historyDrawer, setHistoryDrawer] = useState(false);
   const [ordersDrawer, setOrdersDrawer] = useState(false);
+  const [alertsDrawer, setAlertsDrawer] = useState(false);
 
   // Handlers
   const showBuyModal = (stock) => setBuyModal({ open: true, stock });
   const showSellModal = (item) => setSellModal({ open: true, item });
   const showChart = (stock) => setChartModal({ open: true, stock });
+  const showAddAlert = (stock) =>
+    setAddAlertModal({ open: true, symbol: stock.symbol });
 
   // Portfolio calculation
   const portfolioData = calculatePortfolioData(userInfo?.portfolio, stocks);
 
   // Stock columns
-  const stockColumns = getStockColumns(showChart, showBuyModal);
+  const stockColumns = getStockColumns(showChart, showBuyModal, showAddAlert);
 
   // Guard: Not authenticated
   if (!isAuthenticated) {
@@ -90,15 +119,18 @@ function App() {
   return (
     <ConfigProvider
       theme={{
-        algorithm: isDarkMode ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+        algorithm: isDarkMode
+          ? antTheme.darkAlgorithm
+          : antTheme.defaultAlgorithm,
       }}
     >
-      <Layout style={{ minHeight: '100vh' }}>
+      <Layout style={{ minHeight: "100vh" }}>
         {/* Header */}
-        <AppHeader 
-          userInfo={userInfo} 
+        <AppHeader
+          userInfo={userInfo}
           onLogout={handleLogout}
           onShowLeaderboard={() => setLeaderboardModal(true)}
+          onConnectTelegram={() => setTelegramModal(true)}
           isDarkMode={isDarkMode}
           onToggleTheme={toggleTheme}
         />
@@ -120,11 +152,66 @@ function App() {
                 />
               </Col>
               <Col xs={24} lg={14}>
-                <ActionButtons
-                  onShowPortfolio={() => setPortfolioDrawer(true)}
-                  onShowHistory={() => setHistoryDrawer(true)}
-                  onShowOrders={() => setOrdersDrawer(true)}
-                />
+                <Card
+                  style={{
+                    height: "100%",
+                    borderRadius: 12,
+                  }}
+                >
+                  <Typography.Text
+                    type="secondary"
+                    style={{ fontSize: 20, marginBottom: 20, display: "flex", justifyContent: 'center', fontWeight: 'bold' }}
+                  >
+                    Chức năng nhanh
+                  </Typography.Text>
+
+                  <Row gutter={[16, 16]}>
+                    <Col xs={12} md={6}>
+                      <Button
+                        block
+                        size="large"
+                        //type="primary"
+                        icon={<DesktopOutlined />}
+                        onClick={() => setPortfolioDrawer(true)}
+                      >
+                        Danh mục
+                      </Button>
+                    </Col>
+
+                    <Col xs={12} md={6}>
+                      <Button
+                        block
+                        size="large"
+                        icon={<BellOutlined />}
+                        onClick={() => setAlertsDrawer(true)}
+                      >
+                        Cảnh báo
+                      </Button>
+                    </Col>
+
+                    <Col xs={12} md={6}>
+                      <Button
+                        block
+                        size="large"
+                        icon={<HistoryOutlined />}
+                        onClick={() => setHistoryDrawer(true)}
+                      >
+                        Lịch sử
+                      </Button>
+                    </Col>
+
+                    <Col xs={12} md={6}>
+                      <Button
+                        block
+                        size="large"
+                        icon={<UnorderedListOutlined />}
+                        onClick={() => setOrdersDrawer(true)}
+                      >
+                        Sổ lệnh
+                      </Button>
+                    </Col>
+                  </Row>
+                </Card>
               </Col>
             </Row>
 
@@ -183,7 +270,7 @@ function App() {
         <BankingModal
           open={bankingModal.open}
           type={bankingModal.type}
-          onClose={() => setBankingModal({ open: false, type: '' })}
+          onClose={() => setBankingModal({ open: false, type: "" })}
           onSuccess={refreshUserData}
         />
 
@@ -191,6 +278,23 @@ function App() {
           open={leaderboardModal}
           onClose={() => setLeaderboardModal(false)}
           currentUserId={userInfo?.id}
+        />
+
+        <TelegramModal
+          open={telegramModal}
+          onClose={() => setTelegramModal(false)}
+        />
+
+        <AddAlertModal
+          open={addAlertModal.open}
+          defaultSymbol={addAlertModal.symbol}
+          onClose={() => setAddAlertModal({ open: false, symbol: null })}
+          onSuccess={() => {}}
+        />
+
+        <AlertsDrawer
+          open={alertsDrawer}
+          onClose={() => setAlertsDrawer(false)}
         />
 
         {chartModal.open && (

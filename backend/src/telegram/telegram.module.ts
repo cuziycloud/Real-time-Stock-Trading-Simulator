@@ -11,5 +11,6 @@ import { TelegramService } from './telegram.service';
     }),
   ],
   providers: [TelegramService],
+  exports: [TelegramService],
 })
 export class TelegramModule {}

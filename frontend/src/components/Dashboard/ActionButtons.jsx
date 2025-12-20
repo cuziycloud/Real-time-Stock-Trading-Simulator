@@ -1,16 +1,22 @@
-import { Card, Space, Button } from 'antd';
+import { Card, Space, Button } from "antd";
 import {
   WalletOutlined,
   HistoryOutlined,
   OrderedListOutlined,
-} from '@ant-design/icons';
+  BellOutlined,
+} from "@ant-design/icons";
 
-const ActionButtons = ({ onShowPortfolio, onShowHistory, onShowOrders }) => {
+const ActionButtons = ({
+  onShowPortfolio,
+  onShowHistory,
+  onShowOrders,
+  onShowAlerts,
+}) => {
   return (
     <Card
       style={{
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        textAlign: 'center',
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        textAlign: "center",
       }}
     >
       <Space size="large" wrap>
@@ -22,11 +28,10 @@ const ActionButtons = ({ onShowPortfolio, onShowHistory, onShowOrders }) => {
         >
           Quản lý Danh Mục
         </Button>
-        <Button
-          size="large"
-          icon={<HistoryOutlined />}
-          onClick={onShowHistory}
-        >
+        <Button size="large" icon={<BellOutlined />} onClick={onShowAlerts}>
+          Cảnh Báo
+        </Button>
+        <Button size="large" icon={<HistoryOutlined />} onClick={onShowHistory}>
           Lịch sử Giao Dịch
         </Button>
         <Button

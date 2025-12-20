@@ -10,6 +10,7 @@ import { OrdersModule } from './orders/orders.module';
 import { MarketModule } from './market/market.module';
 import { PaymentModule } from './payment/payment.module';
 import { TelegramModule } from './telegram/telegram.module';
+import { AlertsModule } from './alerts/alerts.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { TelegramModule } from './telegram/telegram.module';
     MarketModule,
     PaymentModule,
     TelegramModule,
+    AlertsModule,
   ],
   controllers: [AppController],
   providers: [AppService, EventsGateway],

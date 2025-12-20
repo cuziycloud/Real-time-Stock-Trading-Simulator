@@ -7,6 +7,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { AlertsService } from 'src/alerts/alerts.service';
 import { MarketService } from 'src/market/market.service';
 import { OrdersService } from 'src/orders/orders.service';
 
@@ -18,6 +19,7 @@ export class EventsGateway implements OnGatewayInit {
   constructor(
     private ordersService: OrdersService,
     private marketService: MarketService,
+    private alertsService: AlertsService,
   ) {}
 
   @SubscribeMessage('join-room')
@@ -43,6 +45,7 @@ export class EventsGateway implements OnGatewayInit {
     //const marketData: StockPriceDto[] = this.stocks;
 
     this.server.emit('market-update', newStocks); // Gửi giá mới cho FE
+    void this.alertsService.checkAlerts(newStocks); // Scanner Alert
     // Matching Engine
     try {
       const matchOrders = await this.ordersService.matchOrders(newStocks);

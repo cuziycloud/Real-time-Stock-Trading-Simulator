@@ -86,8 +86,16 @@ export class UsersService {
       where: { id: id },
       relations: ['portfolio'],
     });
-    if (!user) throw new BadRequestException('User khong ton tai');
+    if (!user) throw new BadRequestException('User không tồn tại');
 
+    return user;
+  }
+
+  async findUserEntity(id: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: id },
+    });
+    if (!user) throw new BadRequestException('User khong ton tai');
     return user;
   }
 
@@ -258,7 +266,7 @@ export class UsersService {
     await this.userRepository.update(userId, { telegramLinkCode: code });
 
     return {
-      link: `https://t.me//Cloudz_support_bot?start=${code}`, //deep linking
+      link: `https://t.me/Cloudz_support_bot?start=${code}`, //deep linking
       code: code,
     };
   }

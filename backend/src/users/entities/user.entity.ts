@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Portfolio } from './portfolio.entity';
 import { Transaction } from './transaction.entity';
 import { Order } from 'src/orders/entities/order.entity';
+import { PriceAlert } from 'src/alerts/entities/price-alert.entity';
 
 @Entity()
 export class User {
@@ -32,4 +33,6 @@ export class User {
   transaction: Transaction[];
   @OneToMany(() => Order, (order) => order.user)
   order: Order[];
+  @OneToMany(() => PriceAlert, (alert) => alert.user)
+  alert: PriceAlert[];
 }
