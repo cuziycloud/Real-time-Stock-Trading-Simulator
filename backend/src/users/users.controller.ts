@@ -54,4 +54,10 @@ export class UsersController {
   findOne(@GetUser('id') userId: number) {
     return this.usersService.findOne(userId);
   }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('telegram-link')
+  generateTelegramLink(@GetUser('id') userId: number) {
+    return this.usersService.generateTelegramLinkCode(userId);
+  }
 }

@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { OrdersModule } from './orders/orders.module';
 import { MarketModule } from './market/market.module';
 import { PaymentModule } from './payment/payment.module';
+import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PaymentModule } from './payment/payment.module';
     OrdersModule,
     MarketModule,
     PaymentModule,
+    TelegramModule,
   ],
   controllers: [AppController],
   providers: [AppService, EventsGateway],

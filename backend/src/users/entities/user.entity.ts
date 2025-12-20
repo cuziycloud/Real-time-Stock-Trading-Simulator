@@ -20,6 +20,12 @@ export class User {
   @Column('decimal', { precision: 15, scale: 2, default: 100000000 })
   balance: number;
 
+  @Column({ nullable: true })
+  telegramChatId: string; // id chat
+
+  @Column()
+  telegramLinkCode: string; // mã lk tạm
+
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolio: Portfolio[];
   @OneToMany(() => Transaction, (transaction) => transaction.user)

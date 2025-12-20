@@ -7,7 +7,10 @@ import {
   TrophyOutlined,
   BulbOutlined,
   BulbFilled,
+  MessageOutlined,
 } from "@ant-design/icons";
+import { useState } from "react";
+import TelegramModal from "../Modals/TelegramModal";
 
 const { Header } = Layout;
 
@@ -18,12 +21,19 @@ const AppHeader = ({
   isDarkMode,
   onToggleTheme,
 }) => {
+  const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
   const userMenu = {
     items: [
       {
         key: "1",
         label: "Hồ sơ cá nhân",
         icon: <UserOutlined />,
+      },
+      {
+        key: "telegram",
+        label: "Kết nối Telegram",
+        icon: <MessageOutlined style={{ color: "#0088cc" }} />,
+        onClick: () => setIsTelegramModalOpen(true),
       },
       { type: "divider" },
       {
@@ -106,6 +116,10 @@ const AppHeader = ({
             </span>
           </div>
         </Dropdown>
+        <TelegramModal
+          open={isTelegramModalOpen}
+          onClose={() => setIsTelegramModalOpen(false)}
+        ></TelegramModal>
       </div>
     </Header>
   );

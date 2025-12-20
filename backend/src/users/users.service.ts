@@ -250,4 +250,29 @@ export class UsersService {
     const newUser = this.userRepository.create(createUserDto);
     return this.userRepository.save(newUser);
   }
+
+  // Tạo mã lk Tele
+  async generateTelegramLinkCode(userId: number) {
+    const code = Math.floor(10000 + Math.random() * 90000).toString();
+
+    await this.userRepository.update(userId, { telegramLinkCode: code });
+
+    return {
+      link: `https://t.me//Cloudz_support_bot?start=${code}`, //deep linking
+      code: code,
+    };
+  }
+
+  // Hàm xử lý bot nhận được mã
+  async linkTelegramAccount(linkCode: string, chatId: string) {
+    const user = await this.userRepository.findOne({
+      where: { telegramLinkCode: linkCode },
+    });
+
+    if (!user) return null; // Mã sai/ hết hạn
+
+    user.telegramChatId = chatId;
+    user.telegramLinkCode = '';
+    return await this.userRepository.save(user);
+  }
 }
