@@ -259,6 +259,17 @@ export class UsersService {
     return this.userRepository.save(newUser);
   }
 
+  async createBot(username: string) {
+    const newBot = this.userRepository.create({
+      username: username,
+      email: `${username.toLowerCase()}@bot.com`,
+      password: 'bot_pwd',
+      isBot: true,
+      balance: 0,
+    });
+    return this.userRepository.save(newBot);
+  }
+
   // Tạo mã lk Tele
   async generateTelegramLinkCode(userId: number) {
     const code = Math.floor(10000 + Math.random() * 90000).toString();
@@ -282,5 +293,14 @@ export class UsersService {
     user.telegramChatId = chatId;
     user.telegramLinkCode = '';
     return await this.userRepository.save(user);
+  }
+
+  async findByUsername(username: string) {
+    const user = await this.userRepository.findOne({
+      where: { username: username },
+    });
+    if (!user) return null; // Không có us/ bot tên như vậy
+
+    return user;
   }
 }

@@ -11,6 +11,8 @@ import { MarketModule } from './market/market.module';
 import { PaymentModule } from './payment/payment.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { BotModule } from './bot/bot.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -25,6 +27,7 @@ import { AlertsModule } from './alerts/alerts.module';
       autoLoadEntities: true,
       synchronize: true, //Tu dong tao bang khi chay code
     }),
+    ScheduleModule.forRoot(),
     StocksModule,
     UsersModule,
     AuthModule,
@@ -33,6 +36,7 @@ import { AlertsModule } from './alerts/alerts.module';
     PaymentModule,
     TelegramModule,
     AlertsModule,
+    BotModule,
   ],
   controllers: [AppController],
   providers: [AppService, EventsGateway],

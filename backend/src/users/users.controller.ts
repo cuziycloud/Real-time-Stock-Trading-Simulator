@@ -3,6 +3,7 @@ import { UsersService } from './users.service';
 import { TradeStockDto } from './dto/trade-stock.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from 'src/auth/get-user.decorator';
+import { NoBotGuard } from 'src/auth/noBotGuard';
 
 @Controller('users')
 export class UsersController {
@@ -38,7 +39,7 @@ export class UsersController {
     return this.usersService.deposit(userId, amount);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), NoBotGuard)
   @Post('withdraw')
   withdraw(@Body('amount') amount: number, @GetUser('id') userId: number) {
     return this.usersService.withdraw(userId, amount);

@@ -27,6 +27,7 @@ export class AuthService {
     const newUser = await this.usersService.create({
       ...registerDto,
       password: hashedPassword,
+      isBot: false,
     });
 
     return {
@@ -43,6 +44,9 @@ export class AuthService {
     const { email, password } = loginDto;
     const user = await this.usersService.findByEmail(email);
     if (!user) throw new UnauthorizedException('User không tồn tại');
+    if (user.isBot) {
+      throw new UnauthorizedException('Bot account');
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new UnauthorizedException('Mật khẩu không khớp');

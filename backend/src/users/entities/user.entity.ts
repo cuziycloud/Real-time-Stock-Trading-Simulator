@@ -18,7 +18,7 @@ export class User {
   @Column()
   password: string;
 
-  @Column('decimal', { precision: 15, scale: 2, default: 100000000 })
+  @Column('decimal', { precision: 15, scale: 2, default: 0 })
   balance: number;
 
   @Column({ nullable: true })
@@ -26,6 +26,9 @@ export class User {
 
   @Column()
   telegramLinkCode: string; // mã lk tạm
+
+  @Column({ default: false })
+  isBot: boolean;
 
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolio: Portfolio[];
