@@ -4,7 +4,7 @@ const { Footer } = Layout;
 
 const AppFooter = () => {
   return (
-    <Footer style={{ textAlign: 'center', background: '#f0f2f5' }}>
+    <Footer style={{ textAlign: 'center'}}>
       Stock Web ©2025 Created by Cloudz
     </Footer>
   );
