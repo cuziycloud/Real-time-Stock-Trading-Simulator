@@ -1,16 +1,16 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Portfolio } from './entities/portfolio.entity';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { TradeStockDto } from './dto/trade-stock.dto';
 import { Transaction } from './entities/transaction.entity';
 import { MarketService } from 'src/market/market.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -20,6 +20,35 @@ export class UsersService {
     private transactionRepository: Repository<Transaction>,
     private marketService: MarketService,
   ) {}
+
+  async onModuleInit() {
+    await this.seedAdminUser();
+  }
+
+  async seedAdminUser() {
+    const adminEmail = 'cloudz@stock.com';
+    const adminExists = await this.userRepository.findOne({
+      where: { email: adminEmail },
+    });
+
+    if (!adminExists) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash('admin123', salt);
+
+      const admin = this.userRepository.create({
+        username: 'Cloudz Admin',
+        email: adminEmail,
+        password: hashedPassword,
+        role: UserRole.ADMIN,
+        balance: 9999999999,
+        isActive: true,
+        isBot: false,
+      });
+
+      // Lưu vào DB
+      await this.userRepository.save(admin);
+    }
+  }
 
   async createMockUser() {
     const user = this.userRepository.create({
@@ -87,8 +116,16 @@ export class UsersService {
       where: { id: id },
       relations: ['portfolio'],
     });
-    if (!user) throw new BadRequestException('User khong ton tai');
+    if (!user) throw new BadRequestException('User không tồn tại');
 
+    return user;
+  }
+
+  async findUserEntity(id: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: id },
+    });
+    if (!user) throw new BadRequestException('User khong ton tai');
     return user;
   }
 
@@ -252,15 +289,67 @@ export class UsersService {
     return this.userRepository.save(newUser);
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async createBot(username: string) {
+    const newBot = this.userRepository.create({
+      username: username,
+      email: `${username.toLowerCase()}@bot.com`,
+      password: 'bot_pwd',
+      isBot: true,
+      balance: 0,
+    });
+    return this.userRepository.save(newBot);
   }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  // Tạo mã lk Tele
+  async generateTelegramLinkCode(userId: number) {
+    const code = Math.floor(10000 + Math.random() * 90000).toString();
+
+    await this.userRepository.update(userId, { telegramLinkCode: code });
+
+    return {
+      link: `https://t.me/Cloudz_support_bot?start=${code}`, //deep linking
+      code: code,
+    };
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  // Hàm xử lý bot nhận được mã
+  async linkTelegramAccount(linkCode: string, chatId: string) {
+    const user = await this.userRepository.findOne({
+      where: { telegramLinkCode: linkCode },
+    });
+
+    if (!user) return null; // Mã sai/ hết hạn
+
+    user.telegramChatId = chatId;
+    user.telegramLinkCode = '';
+    return await this.userRepository.save(user);
+  }
+
+  async findByUsername(username: string) {
+    const user = await this.userRepository.findOne({
+      where: { username: username },
+    });
+    if (!user) return null; // Không có us/ bot tên như vậy
+
+    return user;
+  }
+
+  async findAllUsers() {
+    return await this.userRepository.find({
+      select: [
+        'id',
+        'username',
+        'email',
+        'balance',
+        'isBot',
+        'createdAt',
+        'isActive',
+      ],
+    });
+  }
+
+  async updateStatus(id: number, isActive: boolean) {
+    await this.userRepository.update(id, { isActive });
+    return { message: `User ${id} is now ${isActive ? 'Active' : 'Banned'}` };
   }
 }

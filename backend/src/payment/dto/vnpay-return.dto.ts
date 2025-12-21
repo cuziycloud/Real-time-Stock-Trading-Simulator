@@ -20,5 +20,5 @@ export class VnpayReturnDto {
   vnp_TxnRef: string;
 
   // Cho phép các trường khác nếu VNPAY trả về thêm mà ta chưa khai báo hết
-  [key: string]: any;
+  [key: string]: string;
 }

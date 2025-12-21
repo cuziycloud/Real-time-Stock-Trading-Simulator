@@ -1,18 +1,9 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { TradeStockDto } from './dto/trade-stock.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from 'src/auth/get-user.decorator';
+import { NoBotGuard } from 'src/auth/noBotGuard';
 
 @Controller('users')
 export class UsersController {
@@ -48,7 +39,7 @@ export class UsersController {
     return this.usersService.deposit(userId, amount);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), NoBotGuard)
   @Post('withdraw')
   withdraw(@Body('amount') amount: number, @GetUser('id') userId: number) {
     return this.usersService.withdraw(userId, amount);
@@ -59,24 +50,15 @@ export class UsersController {
     return this.usersService.getLeaderboard();
   }
 
-  @Get()
-  findAll() {
-    return this.usersService.findAll();
-  }
-
   @UseGuards(AuthGuard('jwt'))
   @Get('profile')
   findOne(@GetUser('id') userId: number) {
     return this.usersService.findOne(userId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto); // Dau + de chuyen chuoi (string) 1 thanh number (1)
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @UseGuards(AuthGuard('jwt'))
+  @Post('telegram-link')
+  generateTelegramLink(@GetUser('id') userId: number) {
+    return this.usersService.generateTelegramLinkCode(userId);
   }
 }

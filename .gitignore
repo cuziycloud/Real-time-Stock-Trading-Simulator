@@ -1,0 +1,19 @@
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+node_modules/
+.history/
+
+.env
+.env.production
+.env.local
+
+# --- Docker ---
+db_data/
+mysql_data/
+
+# Ignore file .env trong các thư mục con
+backend/.env
+frontend/.env

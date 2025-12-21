@@ -6,12 +6,25 @@ import { Repository } from 'typeorm';
 @Injectable()
 export class MarketService {
   private stocks = [
-    { symbol: 'VIC', price: 19.5 },
     { symbol: 'FPT', price: 70.0 },
+    { symbol: 'VNM', price: 55.9 },
+    { symbol: 'VIC', price: 20.5 },
+    { symbol: 'HPG', price: 32.4 },
+    { symbol: 'TCB', price: 29.8 },
+    { symbol: 'VCB', price: 85.6 },
+    { symbol: 'BID', price: 48.2 },
     { symbol: 'MWG', price: 45.0 },
     { symbol: 'PNJ', price: 35.2 },
-    { symbol: 'VNM', price: 55.9 },
-    { symbol: 'PHS', price: 90.5 },
+    { symbol: 'MX', price: 40.0 },
+    { symbol: 'SSI', price: 28.5 },
+    { symbol: 'VND', price: 22.6 },
+    { symbol: 'POW', price: 15.4 },
+    { symbol: 'HAG', price: 12.3 },
+    { symbol: 'PHS', price: 12.8 },
+    { symbol: 'ITA', price: 8.5 },
+    { symbol: 'ROS', price: 6.2 },
+    { symbol: 'FLC', price: 9.1 },
+    { symbol: 'DXG', price: 17.8 },
   ];
 
   constructor(
