@@ -8,6 +8,7 @@ import {
   BulbOutlined,
   BulbFilled,
   MessageOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { useState } from "react";
 import TelegramModal from "../Modals/TelegramModal";
@@ -20,6 +21,8 @@ const AppHeader = ({
   onShowLeaderboard,
   isDarkMode,
   onToggleTheme,
+  isAdminMode,
+  onToggleAdminMode
 }) => {
   const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
   const userMenu = {
@@ -72,6 +75,16 @@ const AppHeader = ({
 
       {/* Right side */}
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        {userInfo?.role === 'ADMIN' && (
+          <Button
+            type={isAdminMode? "primary" : "dashed"}
+            danger
+            icon={<SafetyCertificateOutlined />}
+            onClick={onToggleAdminMode}
+          >
+            {isAdminMode ? "Về Sàn GD" : "Trang Quản Trị"}
+          </Button>
+        )}
         {/* Dark Mode Toggle */}
         <Button
           type="text"

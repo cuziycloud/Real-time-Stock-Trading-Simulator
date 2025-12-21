@@ -1,9 +1,19 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  CreateDateColumn,
+} from 'typeorm';
 import { Portfolio } from './portfolio.entity';
 import { Transaction } from './transaction.entity';
 import { Order } from 'src/orders/entities/order.entity';
 import { PriceAlert } from 'src/alerts/entities/price-alert.entity';
 
+export enum UserRole {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+}
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
@@ -29,6 +39,15 @@ export class User {
 
   @Column({ default: false })
   isBot: boolean;
+
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  role: UserRole;
+
+  @Column({ default: true })
+  isActive: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
 
   @OneToMany(() => Portfolio, (portfolio) => portfolio.user)
   portfolio: Portfolio[];

@@ -13,6 +13,7 @@ import { TelegramModule } from './telegram/telegram.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { BotModule } from './bot/bot.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     TelegramModule,
     AlertsModule,
     BotModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService, EventsGateway],

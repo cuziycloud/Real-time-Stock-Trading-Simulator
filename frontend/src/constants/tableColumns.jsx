@@ -1,10 +1,12 @@
-import { Tag, Typography, Button, Space, Tooltip } from "antd";
+import { Tag, Typography, Button, Space, Tooltip, Avatar, Switch } from "antd";
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
   LineChartOutlined,
   BellOutlined,
   DeleteOutlined,
+  RobotOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 
 const { Text } = Typography;
@@ -59,7 +61,7 @@ export const getStockColumns = (showChart, showBuyModal, addAlert) => [
           />
         </Tooltip>
         <Tooltip title="Báo giá">
-            <Button icon={<BellOutlined />} onClick={() => addAlert(record)} />
+          <Button icon={<BellOutlined />} onClick={() => addAlert(record)} />
         </Tooltip>
         <Button type="primary" onClick={() => showBuyModal(record)}>
           Mua ngay
@@ -127,11 +129,18 @@ export const historyColumns = [
     title: "Loại",
     dataIndex: "type",
     key: "type",
-    render: (type) => (
-      <Tag color={type === "BUY" ? "blue" : "volcano"}>
-        {type === "BUY" ? "MUA" : "BÁN"}
-      </Tag>
-    ),
+    render: (type) => {
+      const map = {
+        BUY: { label: "MUA", color: "blue" },
+        SELL: { label: "BÁN", color: "volcano" },
+        DEPOSIT: { label: "NẠP", color: "green" },
+        WITHDRAW: { label: "RÚT", color: "red" },
+      };
+
+      const config = map[type] || { label: type, color: "default" };
+
+      return <Tag color={config.color}>{config.label}</Tag>;
+    },
   },
   {
     title: "Mã",
@@ -251,20 +260,14 @@ export const getAlertColumns = (handleDelete) => [
     title: "Giá Mục Tiêu",
     dataIndex: "targetPrice",
     render: (p) => (
-      <b style={{ color: "#1890ff" }}>
-        {Number(p).toLocaleString()}
-      </b>
+      <b style={{ color: "#1890ff" }}>{Number(p).toLocaleString()}</b>
     ),
   },
   {
     title: "Trạng thái",
     dataIndex: "isActive",
     render: (active) =>
-      active ? (
-        <Tag color="processing">Đang chờ</Tag>
-      ) : (
-        <Tag>Đã tắt</Tag>
-      ),
+      active ? <Tag color="processing">Đang chờ</Tag> : <Tag>Đã tắt</Tag>,
   },
   {
     title: "Hành động",
@@ -279,3 +282,79 @@ export const getAlertColumns = (handleDelete) => [
   },
 ];
 
+export const usersColumns = (handleToggleStatus) => [
+  {
+    title: "ID",
+    dataIndex: "id",
+    width: 60,
+    align: "center",
+  },
+  {
+    title: "Người dùng",
+    dataIndex: "username",
+    render: (name, record) => (
+      <Space>
+        <Avatar
+          icon={record.isBot ? <RobotOutlined /> : <UserOutlined />}
+          style={{
+            backgroundColor: record.isBot
+              ? "#faad14"
+              : record.role === "ADMIN"
+              ? "#f5222d"
+              : "#1890ff",
+          }}
+        />
+        <div>
+          <Text strong>{name}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.email}
+          </Text>
+        </div>
+      </Space>
+    ),
+  },
+  {
+    title: "Vai trò",
+    dataIndex: "role",
+    render: (role, record) => (
+      <Space orientation="vertical" size={0}>
+        {record.isBot ? (
+          <Tag color="gold">BOT</Tag>
+        ) : role === "ADMIN" ? (
+          <Tag color="red">ADMIN</Tag>
+        ) : (
+          <Tag color="blue">USER</Tag>
+        )}
+      </Space>
+    ),
+  },
+  {
+    title: "Tài sản (VND)",
+    dataIndex: "balance",
+    align: "right",
+    render: (val) => <Text>{Number(val).toLocaleString()}</Text>,
+    sorter: (a, b) => a.balance - b.balance,
+  },
+  {
+    title: "Trạng thái",
+    dataIndex: "isActive",
+    align: "center",
+    render: (isActive, record) => {
+      // Không cho phép tự khóa chính mình hoặc khóa các Bot hệ thống
+      //const isMe = false; // (Có thể check id nếu truyền vào)
+
+      return (
+        <Space>
+          <Switch
+            checked={isActive}
+            checkedChildren="Active"
+            unCheckedChildren="Banned"
+            onChange={() => handleToggleStatus(record.id, isActive)}
+            disabled={record.role === "ADMIN"} // Không cho khóa Admin khác
+          />
+        </Space>
+      );
+    },
+  },
+];

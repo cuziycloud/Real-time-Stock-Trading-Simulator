@@ -50,6 +50,7 @@ import "./App.css";
 import AlertsDrawer from "./components/Drawers/AlertsDrawer";
 import AddAlertModal from "./components/Modals/AddAlertModal";
 import TelegramModal from "./components/Modals/TelegramModal";
+import AdminPage from "./components/Admin/AdminPage";
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -93,12 +94,16 @@ function App() {
   const [ordersDrawer, setOrdersDrawer] = useState(false);
   const [alertsDrawer, setAlertsDrawer] = useState(false);
 
+  // Admin
+  const [isAdminMode, setIsAdminMode] = useState(false);
+
   // Handlers
   const showBuyModal = (stock) => setBuyModal({ open: true, stock });
   const showSellModal = (item) => setSellModal({ open: true, item });
   const showChart = (stock) => setChartModal({ open: true, stock });
-  const showAddAlert = (stock) =>
-    setAddAlertModal({ open: true, symbol: stock.symbol });
+  const showAddAlert = (stockRecord) => {
+    setAddAlertModal({ open: true, symbol: stockRecord.symbol });
+  };
 
   // Portfolio calculation
   const portfolioData = calculatePortfolioData(userInfo?.portfolio, stocks);
@@ -128,6 +133,8 @@ function App() {
         {/* Header */}
         <AppHeader
           userInfo={userInfo}
+          isAdminMode={isAdminMode}
+          onToggleAdminMode={() => setIsAdminMode(!isAdminMode)}
           onLogout={handleLogout}
           onShowLeaderboard={() => setLeaderboardModal(true)}
           onConnectTelegram={() => setTelegramModal(true)}
@@ -137,116 +144,126 @@ function App() {
 
         {/* Content */}
         <Content style={{ padding: "24px" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-            {/* Stats & Actions */}
-            <Row gutter={[16, 16]}>
-              <Col xs={24} lg={10}>
-                <StatsCard
-                  balance={userInfo?.balance}
-                  onDeposit={() =>
-                    setBankingModal({ open: true, type: "DEPOSIT" })
-                  }
-                  onWithdraw={() =>
-                    setBankingModal({ open: true, type: "WITHDRAW" })
-                  }
-                />
-              </Col>
-              <Col xs={24} lg={14}>
-                <Card
-                  style={{
-                    height: "100%",
-                    borderRadius: 12,
-                  }}
-                >
-                  <Typography.Text
-                    type="secondary"
-                    style={{ fontSize: 20, marginBottom: 20, display: "flex", justifyContent: 'center', fontWeight: 'bold' }}
-                  >
-                    Chức năng nhanh
-                  </Typography.Text>
-
-                  <Row gutter={[16, 16]}>
-                    <Col xs={12} md={6}>
-                      <Button
-                        block
-                        size="large"
-                        //type="primary"
-                        icon={<DesktopOutlined />}
-                        onClick={() => setPortfolioDrawer(true)}
-                      >
-                        Danh mục
-                      </Button>
-                    </Col>
-
-                    <Col xs={12} md={6}>
-                      <Button
-                        block
-                        size="large"
-                        icon={<BellOutlined />}
-                        onClick={() => setAlertsDrawer(true)}
-                      >
-                        Cảnh báo
-                      </Button>
-                    </Col>
-
-                    <Col xs={12} md={6}>
-                      <Button
-                        block
-                        size="large"
-                        icon={<HistoryOutlined />}
-                        onClick={() => setHistoryDrawer(true)}
-                      >
-                        Lịch sử
-                      </Button>
-                    </Col>
-
-                    <Col xs={12} md={6}>
-                      <Button
-                        block
-                        size="large"
-                        icon={<UnorderedListOutlined />}
-                        onClick={() => setOrdersDrawer(true)}
-                      >
-                        Sổ lệnh
-                      </Button>
-                    </Col>
-                  </Row>
-                </Card>
-              </Col>
-            </Row>
-
-            {/* Title */}
-            <div style={{ textAlign: "center", margin: "40px 0 20px" }}>
-              <Title level={2}>
-                <DesktopOutlined /> Sàn Chứng Khoán Real-time
-              </Title>
-            </div>
-
-            {/* Table Card */}
-            <Card
-              variant={false}
-              style={{
-                borderRadius: "8px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-              }}
-              title={
-                <span>
-                  <ThunderboltFilled
-                    style={{ color: "#faad14", marginRight: 8 }}
+          {isAdminMode ? (
+            <AdminPage />
+          ) : (
+            <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+              {/* Stats & Actions */}
+              <Row gutter={[16, 16]}>
+                <Col xs={24} lg={10}>
+                  <StatsCard
+                    balance={userInfo?.balance}
+                    onDeposit={() =>
+                      setBankingModal({ open: true, type: "DEPOSIT" })
+                    }
+                    onWithdraw={() =>
+                      setBankingModal({ open: true, type: "WITHDRAW" })
+                    }
                   />
-                  Bảng Giá Trực Tuyến
-                </span>
-              }
-            >
-              <Table
-                dataSource={stocks}
-                columns={stockColumns}
-                rowKey="symbol"
-                pagination={{ pageSize: 10 }}
-                scroll={{ x: "max-content" }}
-              />
-            </Card>
-          </div>
+                </Col>
+                <Col xs={24} lg={14}>
+                  <Card
+                    style={{
+                      height: "100%",
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Typography.Text
+                      type="secondary"
+                      style={{
+                        fontSize: 20,
+                        marginBottom: 20,
+                        display: "flex",
+                        justifyContent: "center",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Chức năng nhanh
+                    </Typography.Text>
+
+                    <Row gutter={[16, 16]}>
+                      <Col xs={12} md={6}>
+                        <Button
+                          block
+                          size="large"
+                          //type="primary"
+                          icon={<DesktopOutlined />}
+                          onClick={() => setPortfolioDrawer(true)}
+                        >
+                          Danh mục
+                        </Button>
+                      </Col>
+
+                      <Col xs={12} md={6}>
+                        <Button
+                          block
+                          size="large"
+                          icon={<BellOutlined />}
+                          onClick={() => setAlertsDrawer(true)}
+                        >
+                          Cảnh báo
+                        </Button>
+                      </Col>
+
+                      <Col xs={12} md={6}>
+                        <Button
+                          block
+                          size="large"
+                          icon={<HistoryOutlined />}
+                          onClick={() => setHistoryDrawer(true)}
+                        >
+                          Lịch sử
+                        </Button>
+                      </Col>
+
+                      <Col xs={12} md={6}>
+                        <Button
+                          block
+                          size="large"
+                          icon={<UnorderedListOutlined />}
+                          onClick={() => setOrdersDrawer(true)}
+                        >
+                          Sổ lệnh
+                        </Button>
+                      </Col>
+                    </Row>
+                  </Card>
+                </Col>
+              </Row>
+
+              {/* Title */}
+              <div style={{ textAlign: "center", margin: "40px 0 20px" }}>
+                <Title level={2}>
+                  <DesktopOutlined /> Sàn Chứng Khoán Real-time
+                </Title>
+              </div>
+
+              {/* Table Card */}
+              <Card
+                variant={false}
+                style={{
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                }}
+                title={
+                  <span>
+                    <ThunderboltFilled
+                      style={{ color: "#faad14", marginRight: 8 }}
+                    />
+                    Bảng Giá Trực Tuyến
+                  </span>
+                }
+              >
+                <Table
+                  dataSource={stocks}
+                  columns={stockColumns}
+                  rowKey="symbol"
+                  pagination={{ pageSize: 10 }}
+                  scroll={{ x: "max-content" }}
+                />
+              </Card>
+            </div>
+          )}
         </Content>
 
         {/* Footer */}
@@ -283,6 +300,7 @@ function App() {
         <TelegramModal
           open={telegramModal}
           onClose={() => setTelegramModal(false)}
+          onSuccess={refreshUserData} 
         />
 
         <AddAlertModal
@@ -290,6 +308,8 @@ function App() {
           defaultSymbol={addAlertModal.symbol}
           onClose={() => setAddAlertModal({ open: false, symbol: null })}
           onSuccess={() => {}}
+          userInfo={userInfo}
+          onOpenTelegram={() => setTelegramModal(true)}
         />
 
         <AlertsDrawer

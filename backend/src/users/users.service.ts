@@ -303,4 +303,23 @@ export class UsersService {
 
     return user;
   }
+
+  async findAllUsers() {
+    return await this.userRepository.find({
+      select: [
+        'id',
+        'username',
+        'email',
+        'balance',
+        'isBot',
+        'createdAt',
+        'isActive',
+      ],
+    });
+  }
+
+  async updateStatus(id: number, isActive: boolean) {
+    await this.userRepository.update(id, { isActive });
+    return { message: `User ${id} is now ${isActive ? 'Active' : 'Banned'}` };
+  }
 }
