@@ -1,0 +1,55 @@
+services:
+  # 1. DATABASE
+  database:
+    image: mysql:8.0
+    container_name: stock_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    ports:
+      - '3307:3306' # Map cổng 3306 trong container ra 3307 máy thật (để tránh đụng port nếu máy có mysql)
+    volumes:
+      - db_data:/var/lib/mysql # Để dữ liệu không bị mất khi tắt container
+    networks:
+      - stock-network
+
+  # 2. BACKEND
+  backend:
+    build: ./backend
+    container_name: stock_backend
+    ports:
+      - '3000:3000'
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+      VNP_TMN_CODE: ${VNP_TMN_CODE}
+      VNP_HASH_SECRET: ${VNP_HASH_SECRET}
+      VNP_URL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+      VNP_RETURN_URL: http://localhost:3000/payment/vnpay_return
+      CASSO_SECRET_TOKEN: ${CASSO_SECRET_TOKEN}
+    
+    depends_on:
+      - database
+    networks:
+      - stock-network
+
+  # 3. FRONTEND
+  frontend:
+    build: ./frontend
+    container_name: stock_frontend
+    ports:
+      - '5173:80' # Map cổng 80 của Nginx ra cổng 5173 máy thật
+    depends_on:
+      - backend
+    networks:
+      - stock-network
+
+volumes:
+  db_data:
+
+networks:
+  stock-network:
