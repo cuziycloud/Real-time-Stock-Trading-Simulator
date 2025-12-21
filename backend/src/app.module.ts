@@ -14,6 +14,7 @@ import { AlertsModule } from './alerts/alerts.module';
 import { BotModule } from './bot/bot.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdminModule } from './admin/admin.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { AdminModule } from './admin/admin.module';
     AlertsModule,
     BotModule,
     AdminModule,
+    ConfigModule.forRoot({ isGlobal: true }),
   ],
   controllers: [AppController],
   providers: [AppService, EventsGateway],

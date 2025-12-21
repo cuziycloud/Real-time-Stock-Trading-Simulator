@@ -3,16 +3,28 @@ import { UsersService } from 'src/users/users.service';
 import moment from 'moment';
 import * as qs from 'qs'; // Xử lý query string
 import * as crypto from 'crypto';
+import { WebhookDto } from './dto/webhook.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class PaymentService {
-  constructor(private userService: UsersService) {}
+  private vnp_TmnCode: string;
+  private vnp_HashSecret: string;
+  private vnp_Url: string;
+  private vnp_returnUrl: string;
 
-  // Cấu hình VNPAY
-  private vnp_TmnCode = 'AFWWEE43';
-  private vnp_HashSecret = '5A9DUYGGKS3C54Z1IUOMX7U7RILDP6JX';
-  private vnp_Url = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
-  private vnp_returnUrl = 'http://localhost:3000/payment/vnpay_return';
+  constructor(
+    private userService: UsersService,
+    private configService: ConfigService,
+  ) {
+    // getOrThrow: tìm thấy thì trả về string, nếu ko thì báo lỗi
+    this.vnp_TmnCode = this.configService.getOrThrow<string>('VNP_TMN_CODE');
+    this.vnp_HashSecret =
+      this.configService.getOrThrow<string>('VNP_HASH_SECRET');
+    this.vnp_Url = this.configService.getOrThrow<string>('VNP_URL');
+    this.vnp_returnUrl =
+      this.configService.getOrThrow<string>('VNP_RETURN_URL');
+  }
 
   createPaymentUrl(amount: number, userId: number, ipAddr: string) {
     const date = new Date();
@@ -22,7 +34,7 @@ export class PaymentService {
     let vnp_Params: Record<string, string | number> = {};
     vnp_Params['vnp_Version'] = '2.1.0';
     vnp_Params['vnp_Command'] = 'pay';
-    vnp_Params['vnp_TmnCode'] = 'AFWWEE43';
+    vnp_Params['vnp_TmnCode'] = this.vnp_TmnCode;
     vnp_Params['vnp_Locale'] = 'vn';
     vnp_Params['vnp_CurrCode'] = 'VND';
     vnp_Params['vnp_TxnRef'] = orderId;
@@ -109,5 +121,20 @@ export class PaymentService {
     } else {
       return { code: '99', message: 'Invalid Signature' };
     }
+  }
+
+  // Check format nd chuyển
+  async processWebhook(webhookDto: WebhookDto) {
+    //console.log('Webhook: ', webhookDto);
+
+    const match = webhookDto.content.match(/USER_(\d+)/i); //USER_123
+    if (match) {
+      const userId = Number(match[1]);
+      //console.log(userId);
+      await this.userService.deposit(userId, webhookDto.amount);
+      console.log(`[Webhook] Đã cộng ${webhookDto.amount} cho User ${userId}`);
+      return { success: true, message: 'Chuẩn format' };
+    }
+    return { success: false, message: 'Format chưa đúng' };
   }
 }

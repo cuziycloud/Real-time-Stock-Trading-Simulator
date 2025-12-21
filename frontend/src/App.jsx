@@ -287,6 +287,7 @@ function App() {
         <BankingModal
           open={bankingModal.open}
           type={bankingModal.type}
+          userInfo={userInfo}
           onClose={() => setBankingModal({ open: false, type: "" })}
           onSuccess={refreshUserData}
         />
