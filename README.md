@@ -34,8 +34,8 @@ Dự án hỗ trợ chạy "Zero Config" với Docker. Bạn không cần cài �
 
 ### Bước 1: Clone dự án
 ```bash
-git clone https://github.com/username-cua-ban/stock-trading-simulator.git
-cd stock-trading-simulator
+git clone https://github.com/cuziycloud/Real-time-Stock-Trading-Simulator.git
+cd Real-time-Stock-Trading-Simulator
 ```
 
 ### Bước 2: Cấu hình môi trường
