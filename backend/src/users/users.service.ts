@@ -1,15 +1,16 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Portfolio } from './entities/portfolio.entity';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { TradeStockDto } from './dto/trade-stock.dto';
 import { Transaction } from './entities/transaction.entity';
 import { MarketService } from 'src/market/market.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -19,6 +20,35 @@ export class UsersService {
     private transactionRepository: Repository<Transaction>,
     private marketService: MarketService,
   ) {}
+
+  async onModuleInit() {
+    await this.seedAdminUser();
+  }
+
+  async seedAdminUser() {
+    const adminEmail = 'cloudz@stock.com';
+    const adminExists = await this.userRepository.findOne({
+      where: { email: adminEmail },
+    });
+
+    if (!adminExists) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash('admin123', salt);
+
+      const admin = this.userRepository.create({
+        username: 'Cloudz Admin',
+        email: adminEmail,
+        password: hashedPassword,
+        role: UserRole.ADMIN,
+        balance: 9999999999,
+        isActive: true,
+        isBot: false,
+      });
+
+      // Lưu vào DB
+      await this.userRepository.save(admin);
+    }
+  }
 
   async createMockUser() {
     const user = this.userRepository.create({

@@ -34,7 +34,7 @@ export class User {
   @Column({ nullable: true })
   telegramChatId: string; // id chat
 
-  @Column()
+  @Column({ nullable: true })
   telegramLinkCode: string; // mã lk tạm
 
   @Column({ default: false })

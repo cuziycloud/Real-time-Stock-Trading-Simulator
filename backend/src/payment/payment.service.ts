@@ -125,12 +125,12 @@ export class PaymentService {
 
   // Check format nd chuyển
   async processWebhook(webhookDto: WebhookDto) {
-    //console.log('Webhook: ', webhookDto);
+    console.log('Webhook: ', webhookDto);
 
     const match = webhookDto.content.match(/USER_(\d+)/i); //USER_123
     if (match) {
       const userId = Number(match[1]);
-      //console.log(userId);
+      console.log(userId);
       await this.userService.deposit(userId, webhookDto.amount);
       console.log(`[Webhook] Đã cộng ${webhookDto.amount} cho User ${userId}`);
       return { success: true, message: 'Chuẩn format' };
