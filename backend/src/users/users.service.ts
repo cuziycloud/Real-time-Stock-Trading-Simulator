@@ -236,6 +236,8 @@ export class UsersService implements OnModuleInit {
 
     if (!user) throw new BadRequestException('Không tìm thấy người dùng');
 
+    if (Number(user.balance) < amount)
+      throw new BadRequestException('Số dư không đủ');
     // Trừ tiền
     user.balance = Number(user.balance) - amount;
     await this.userRepository.save(user);

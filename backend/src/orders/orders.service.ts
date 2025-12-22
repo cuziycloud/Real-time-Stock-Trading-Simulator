@@ -57,8 +57,8 @@ export class OrdersService {
       const currentStock = marketData.find((s) => s.symbol === order.symbol);
       if (!currentStock) continue;
 
-      const marketPrice = currentStock.price;
-      const targetPrice = Number(order.targetPrice);
+      const marketPrice = currentStock.price; // Gtt
+      const targetPrice = Number(order.targetPrice); // Giá mong muốn
       let isMatched = false;
 
       // Mua: Gtt <= Giá muốn mua

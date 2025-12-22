@@ -22,7 +22,7 @@ export class TelegramService {
     // 1. Lấy nd tin nhắn
     const text = ctx.message.text; /// start 123456
     const chatId = ctx.chat?.id.toString();
-    const userName = ctx.from?.first_name || 'Người dùng';
+    const userName = ctx.from?.username || 'Nhà Đầu Tư';
 
     if (!chatId) return;
 
