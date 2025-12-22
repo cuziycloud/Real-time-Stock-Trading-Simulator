@@ -1,4 +1,4 @@
-import { Tag, Typography, Button, Space, Tooltip, Avatar, Switch } from "antd";
+import { Tag, Typography, Button, Space, Tooltip, Avatar, Switch, Popconfirm } from "antd";
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
@@ -170,7 +170,7 @@ export const historyColumns = [
   },
 ];
 
-export const orderColumns = [
+export const getOrderColumns = (handleCancelOrder) => [
   {
     title: "Thời gian",
     dataIndex: "createdAt",
@@ -204,6 +204,28 @@ export const orderColumns = [
       if (s === "PENDING") color = "processing";
       if (s === "CANCELLED") color = "error";
       return <Tag color={color}>{s}</Tag>;
+    },
+  },
+  {
+    title: "",
+    key: "action",
+    render: (_, record) => {
+      // Chỉ hiện nút Hủy nếu trạng thái là PENDING
+      if (record.status === "PENDING") {
+        return (
+          <Popconfirm
+            title="Hủy lệnh này?"
+            description="Bạn có chắc chắn muốn hủy lệnh chờ này không?"
+            onConfirm={() => handleCancelOrder(record.id)}
+            okText="Hủy ngay"
+            cancelText="Không"
+            okButtonProps={{ danger: true }}
+          >
+            <Button danger type="text" icon={<DeleteOutlined />} />
+          </Popconfirm>
+        );
+      }
+      return null; // Các trạng thái khác không làm gì được
     },
   },
 ];

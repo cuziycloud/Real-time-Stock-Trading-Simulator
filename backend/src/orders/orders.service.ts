@@ -92,6 +92,22 @@ export class OrdersService {
     return matchOrders;
   }
 
+  // 4. Hủy lệnh
+  async cancelOrder(userId: number, orderId: number) {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId, user: { id: userId } },
+    });
+
+    if (!order) throw new BadRequestException('Lệnh không tồn tại');
+
+    if (order.status !== OrderStatus.PENDING)
+      throw new BadRequestException('Chỉ có thể hủy lệnh đang chờ (PENDING)');
+
+    order.status = OrderStatus.CANCELLED;
+
+    return await this.orderRepository.save(order);
+  }
+
   private async executeOrder(
     order: Order,
     executionPrice: number,

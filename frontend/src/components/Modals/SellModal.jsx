@@ -19,15 +19,15 @@ const SellModal = ({ open, item, onClose, onSuccess }) => {
   const [quantityHelp, setQuantityHelp] = useState(''); // Text thông báo lỗi dưới ô input
 
   useEffect(() => {
-    if (item && open) {
-      setTargetPrice(item.price);
-      setQuantity(item.quantity);
+    if (item?.symbol && open) {
+      //setTargetPrice(item.marketPrice);
+      setQuantity(1);
       setOrderType(ORDER_TYPES.MARKET);
       // Reset validation
       setQuantityStatus('');
       setQuantityHelp('');
     }
-  }, [item, open]);
+  }, [open, item?.symbol]);
 
    const handleQuantityChange = (val) => {
     setQuantity(val);
