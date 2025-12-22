@@ -31,7 +31,7 @@ const BuyModal = ({
 
     setLoading(true);
     try {
-      if (orderType === ORDER_TYPES.MARKET) {
+      if (orderType === ORDER_TYPES.MARKET) { // Mua ngay
         const res = await axiosClient.post('/users/buy', {
           symbol: stock.symbol,
           quantity,
@@ -41,20 +41,25 @@ const BuyModal = ({
         message.success(
           `Mua thành công! Số dư: ${formatCurrency(res.data.currentBalance)} VND`
         );
-      } else {
-        if (targetPrice <= 0) {
+      } else { // Đặt lệnh
+        if (targetPrice <= 0) { 
           message.error('Vui lòng nhập giá hợp lệ!');
+          setLoading(false);
           return;
         }
 
-        await axiosClient.post('/orders/place', {
+        const res = await axiosClient.post('/orders/place', {
           symbol: stock.symbol,
           direction: 'BUY',
           quantity,
           targetPrice,
         });
 
-        message.success('Đã đặt lệnh chờ mua thành công');
+        if (res.data.status === 'MATCHED') {
+            message.success(`Khớp lệnh ngay lập tức! Đã mua ${quantity} ${stock.symbol}`);
+        } else {
+            message.info('Đã đặt lệnh chờ. Vui lòng theo dõi trong Sổ Lệnh.');
+        }
       }
 
       onSuccess();

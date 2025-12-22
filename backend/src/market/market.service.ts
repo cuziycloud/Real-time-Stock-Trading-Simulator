@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { StockHistory } from './entities/stock-history.entity';
 import { Repository } from 'typeorm';
@@ -32,8 +32,15 @@ export class MarketService {
     private stockHistory: Repository<StockHistory>,
   ) {}
 
-  getCurrentPrices() {
+  getCurrentStocks() {
     return this.stocks;
+  }
+
+  getCurrentStock(symbol: string) {
+    const stock = this.stocks.find((s) => s.symbol === symbol);
+    if (!stock)
+      throw new BadRequestException('Mã cổ phiếu không tồn tại trên sàn');
+    return stock;
   }
 
   updateMarketPrices() {

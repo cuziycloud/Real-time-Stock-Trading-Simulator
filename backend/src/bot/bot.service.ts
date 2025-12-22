@@ -41,7 +41,7 @@ export class BotService {
     if (this.botIds.length === 0) return;
 
     // 1. Lấy tt thị trường
-    const stocks = this.marketService.getCurrentPrices();
+    const stocks = this.marketService.getCurrentStocks();
 
     // 2. Chọn bot + thông số lệnh ngẫu nhiên
     const randomBotId =

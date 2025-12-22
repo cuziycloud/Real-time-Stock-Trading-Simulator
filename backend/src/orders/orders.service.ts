@@ -6,6 +6,7 @@ import { UsersService } from 'src/users/users.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { StockPriceDto } from './dto/market-update.dto';
 import { TradeStockDto } from 'src/users/dto/trade-stock.dto';
+import { MarketService } from 'src/market/market.service';
 
 @Injectable()
 export class OrdersService {
@@ -13,6 +14,7 @@ export class OrdersService {
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
     private userService: UsersService,
+    private marketService: MarketService,
   ) {}
 
   // 1. Đặt lệnh chờ
@@ -20,15 +22,31 @@ export class OrdersService {
     const user = await this.userService.findOne(userId);
     if (!user) throw new BadRequestException('User không tồn tại');
 
-    // Check số dư => tiền tạm ứng (Coming...)
-
-    const newOrder = this.orderRepository.create({
+    let order = this.orderRepository.create({
       ...dto,
       user: user,
       status: OrderStatus.PENDING,
     });
+    order = await this.orderRepository.save(order);
 
-    return await this.orderRepository.save(newOrder);
+    const currentStock = this.marketService.getCurrentStock(dto.symbol); // Lấy cổ phiếu đó hiện tại
+    const isMatched = this.checkMatchCondition(
+      dto.direction,
+      dto.targetPrice,
+      currentStock.price,
+    );
+
+    if (isMatched) {
+      const executedOrder = await this.executeOrder(order, currentStock.price);
+
+      if (executedOrder) {
+        return executedOrder;
+      }
+    }
+
+    // Check số dư => tiền tạm ứng (Coming...)
+
+    return order;
   }
 
   // 2. Lấy danh sách lệnh của user
@@ -58,20 +76,11 @@ export class OrdersService {
       if (!currentStock) continue;
 
       const marketPrice = currentStock.price; // Gtt
-      const targetPrice = Number(order.targetPrice); // Giá mong muốn
-      let isMatched = false;
-
-      // Mua: Gtt <= Giá muốn mua
-      if (order.direction === OrderType.BUY && marketPrice <= targetPrice) {
-        isMatched = true;
-      }
-      // Bán: gtt >= Giá muốn bán
-      else if (
-        order.direction === OrderType.SELL &&
-        marketPrice >= targetPrice
-      ) {
-        isMatched = true;
-      }
+      const isMatched = this.checkMatchCondition(
+        order.direction,
+        Number(order.targetPrice), // Giá mong muốn
+        marketPrice,
+      );
 
       if (isMatched) {
         const result = await this.executeOrder(order, marketPrice);
@@ -108,5 +117,19 @@ export class OrdersService {
       await this.orderRepository.save(order);
       return null;
     }
+  }
+
+  private checkMatchCondition(
+    direction: OrderType,
+    targetPrice: number,
+    marketPrice: number,
+  ): boolean {
+    if (direction === OrderType.BUY && marketPrice <= targetPrice) {
+      return true;
+    }
+    if (direction === OrderType.SELL && marketPrice >= targetPrice) {
+      return true;
+    }
+    return false;
   }
 }

@@ -258,7 +258,7 @@ export class UsersService implements OnModuleInit {
   async getLeaderboard() {
     const users = await this.userRepository.find({ relations: ['portfolio'] });
 
-    const currentPrices = this.marketService.getCurrentPrices();
+    const currentPrices = this.marketService.getCurrentStocks();
 
     const leaderboard = users.map((user) => {
       let stockValue = 0;
