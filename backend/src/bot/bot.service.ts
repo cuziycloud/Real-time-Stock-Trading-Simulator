@@ -46,10 +46,22 @@ export class BotService {
     // 2. Chọn bot + thông số lệnh ngẫu nhiên
     const randomBotId =
       this.botIds[Math.floor(Math.random() * this.botIds.length)];
+    const bot = await this.usersService.findOne(randomBotId);
+
     const randomStock = stocks[Math.floor(Math.random() * stocks.length)];
-    const randomDirection =
-      Math.random() > 0.5 ? OrderType.BUY : OrderType.SELL;
-    const randomQuantity = Math.floor(Math.random() * 50) + 1;
+    let randomDirection = Math.random() > 0.5 ? OrderType.BUY : OrderType.SELL;
+    let randomQuantity = (Math.floor(Math.random() * 50) + 1) * 10;
+
+    if (randomDirection === OrderType.SELL) {
+      const portfolioItem = bot.portfolio.find(
+        (b) => b.symbol === randomStock.symbol,
+      );
+      if (!portfolioItem || portfolioItem.quantity <= 0) {
+        randomDirection = OrderType.BUY;
+      } else if (portfolioItem.quantity < randomQuantity) {
+        randomQuantity = portfolioItem.quantity;
+      }
+    }
 
     const variation = randomStock.price * 0.05; // Biến động 5%
     const randomPrice =
@@ -63,7 +75,7 @@ export class BotService {
     const orderDto: CreateOrderDto = {
       symbol: randomStock.symbol,
       direction: randomDirection,
-      quantity: randomQuantity * 10,
+      quantity: randomQuantity,
       targetPrice: finalPrice,
     };
 

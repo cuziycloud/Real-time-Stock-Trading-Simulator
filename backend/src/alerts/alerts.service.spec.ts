@@ -166,5 +166,37 @@ describe('AlertsService', () => {
       expect(telegramService.sendMsg).not.toHaveBeenCalled(); // Không được gửi tin
       expect(alertRepository.save).not.toHaveBeenCalled(); // Không được update DB
     });
+
+    it('should send telegram message when price matches condition (BELOW)', async () => {
+      // 1. ARRANGE
+      // Giả lập trong DB có 1 cảnh báo đang chờ: VIC <= 30
+      const activeAlert = {
+        id: 1,
+        symbol: 'VIC',
+        targetPrice: 30,
+        condition: AlertCondition.BELOW,
+        isActive: true,
+        user: { id: 1, telegramChatId: '123456' }, // User đã kết nối Tele
+      };
+
+      alertRepository.find.mockResolvedValue([activeAlert]);
+
+      // Giả lập thị trường
+      const marketData = [{ symbol: 'VIC', price: 29 }];
+
+      // 2. ACT
+      await service.checkAlerts(marketData);
+
+      // 3. ASSERT
+      // A. Kiểm tra xem Bot có được gọi để gửi tin ko?
+      expect(telegramService.sendMsg).toHaveBeenCalledWith(
+        '123456', // chatId
+        expect.stringContaining('CẢNH BÁO GIÁ: VIC'), // Nd tn phải chứa tên mã
+      );
+
+      // B. Kiểm tra xem Alert có bị tắt (isActive = false) và lưu lại ko
+      expect(activeAlert.isActive).toBe(false); // Biến gốc bị thay đổi
+      expect(alertRepository.save).toHaveBeenCalledWith(activeAlert);
+    });
   });
 });
