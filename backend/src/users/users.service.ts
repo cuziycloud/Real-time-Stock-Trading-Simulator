@@ -6,9 +6,10 @@ import { User, UserRole } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { TradeStockDto } from './dto/trade-stock.dto';
 import { Transaction } from './entities/transaction.entity';
-import { MarketService } from 'src/market/market.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from 'src/auth/dto/register.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { StocksService } from 'src/stocks/stocks.service';
 
 @Injectable()
 export class UsersService implements OnModuleInit {
@@ -19,7 +20,7 @@ export class UsersService implements OnModuleInit {
     private portfolioRepository: Repository<Portfolio>,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
-    private marketService: MarketService,
+    private stockService: StocksService,
   ) {}
 
   async onModuleInit() {
@@ -256,9 +257,12 @@ export class UsersService implements OnModuleInit {
   }
 
   async getLeaderboard() {
-    const users = await this.userRepository.find({ relations: ['portfolio'] });
+    const users = await this.userRepository.find({
+      where: { isBot: false, role: UserRole.USER },
+      relations: ['portfolio'],
+    });
 
-    const currentPrices = this.marketService.getCurrentStocks();
+    const currentPrices = this.stockService.getRealtimePrices();
 
     const leaderboard = users.map((user) => {
       let stockValue = 0;
@@ -292,6 +296,7 @@ export class UsersService implements OnModuleInit {
     return this.userRepository.save(newUser);
   }
 
+  // C
   async createUser(createUserDto: CreateUserDto) {
     const existingUser = await this.userRepository.findOne({
       where: { email: createUserDto.email },
@@ -374,6 +379,7 @@ export class UsersService implements OnModuleInit {
     });
   }
 
+  // D
   async updateStatus(id: number, isActive: boolean) {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) throw new BadRequestException('User không tồn tại');
@@ -382,6 +388,22 @@ export class UsersService implements OnModuleInit {
     }
     await this.userRepository.update(id, { isActive });
     return { message: `User ${id} is now ${isActive ? 'Active' : 'Banned'}` };
+  }
+
+  // U
+  async updateUser(id: number, updateUserDto: UpdateUserDto) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new BadRequestException('Không tìm thấy user');
+
+    if (updateUserDto.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+    }
+
+    await this.userRepository.update(id, {
+      ...updateUserDto,
+    });
+    return { message: 'Cập nhật thành công' };
   }
 
   async getSystemStats() {

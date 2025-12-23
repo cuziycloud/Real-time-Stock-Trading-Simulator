@@ -5,12 +5,12 @@ import { User } from './entities/user.entity';
 import { Portfolio } from './entities/portfolio.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Transaction } from './entities/transaction.entity';
-import { MarketModule } from 'src/market/market.module';
+import { StocksModule } from 'src/stocks/stocks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Portfolio, Transaction]),
-    MarketModule,
+    StocksModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

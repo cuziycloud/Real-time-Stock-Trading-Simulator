@@ -6,7 +6,7 @@ import { UsersService } from 'src/users/users.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { StockPriceDto } from './dto/market-update.dto';
 import { TradeStockDto } from 'src/users/dto/trade-stock.dto';
-import { MarketService } from 'src/market/market.service';
+import { StocksService } from 'src/stocks/stocks.service';
 
 @Injectable()
 export class OrdersService {
@@ -14,7 +14,7 @@ export class OrdersService {
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
     private userService: UsersService,
-    private marketService: MarketService,
+    private stockService: StocksService,
   ) {}
 
   // 1. Đặt lệnh chờ
@@ -29,7 +29,7 @@ export class OrdersService {
     });
     order = await this.orderRepository.save(order);
 
-    const currentStock = this.marketService.getCurrentStock(dto.symbol); // Lấy cổ phiếu đó hiện tại
+    const currentStock = this.stockService.getRealtimeStock(dto.symbol); // Lấy cổ phiếu đó hiện tại
     const isMatched = this.checkMatchCondition(
       dto.direction,
       dto.targetPrice,

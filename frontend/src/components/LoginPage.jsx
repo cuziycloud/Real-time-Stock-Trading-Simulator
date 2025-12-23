@@ -22,7 +22,7 @@ const LoginPage = ({ onLoginSuccess }) => {
         message.success('Đăng nhập thành công');
         onLoginSuccess();
     } catch (error) {
-        message.error(error.response?.data?.message || 'Đăng nhập thất bại');
+        message.error(error.response?.data?.message || 'Đăng nhập thất bại' );
     } finally {
         setLoading(false);
     }
@@ -46,9 +46,9 @@ const LoginPage = ({ onLoginSuccess }) => {
         position: 'fixed',
         top: 0,
         left: 0,
-        width: '100vw', // Chiếm trọn chiều ngang viewport
-        height: '100vh', // Chiếm trọn chiều cao viewport
-        zIndex: 1000, // Nổi lên trên cùng
+        width: '100vw', 
+        height: '100vh', 
+        zIndex: 1000,
         
         display: 'flex', 
         justifyContent: 'center', 

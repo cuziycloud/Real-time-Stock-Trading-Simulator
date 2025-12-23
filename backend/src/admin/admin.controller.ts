@@ -11,6 +11,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Roles } from 'src/auth/roles.decorator';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { UpdateUserDto } from 'src/users/dto/update-user.dto';
 import { UserRole } from 'src/users/entities/user.entity';
 import { UsersService } from 'src/users/users.service';
 
@@ -41,5 +42,10 @@ export class AdminController {
   @Post('create-user')
   async createUser(@Body() createUserDto: CreateUserDto) {
     return await this.usersService.createUser(createUserDto);
+  }
+
+  @Patch('users/:id')
+  async updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return await this.usersService.updateUser(+id, dto);
   }
 }

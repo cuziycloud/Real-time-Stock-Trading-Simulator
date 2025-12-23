@@ -9,13 +9,13 @@ import {
   InputNumber,
 } from "antd";
 import { useState } from "react";
-import axiosClient from "../../services/axios-client";
 import {
   UserOutlined,
   LockOutlined,
   MailOutlined,
   DollarOutlined,
 } from "@ant-design/icons";
+import axiosClient from "../../../services/axios-client";
 
 const CreateUserModal = ({ open, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -56,7 +56,7 @@ const CreateUserModal = ({ open, onClose, onSuccess }) => {
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ role: "USER", isBot: false }} // Giá trị mặc định
+        initialValues={{ role: "USER", isBot: false }} // mặc định
       >
         <Form.Item
           name="username"

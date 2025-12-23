@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { MarketService } from 'src/market/market.service';
 import { CreateOrderDto } from 'src/orders/dto/create-order.dto';
 import { OrderType } from 'src/orders/entities/order.entity';
 import { OrdersService } from 'src/orders/orders.service';
+import { StocksService } from 'src/stocks/stocks.service';
 import { UsersService } from 'src/users/users.service';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class BotService {
   constructor(
     private usersService: UsersService,
     private ordersService: OrdersService,
-    private marketService: MarketService,
+    private stockService: StocksService,
   ) {}
 
   // Khởi tạo (chạy 1 lần khi sv bật)
@@ -41,7 +41,7 @@ export class BotService {
     if (this.botIds.length === 0) return;
 
     // 1. Lấy tt thị trường
-    const stocks = this.marketService.getCurrentStocks();
+    const stocks = this.stockService.getRealtimePrices();
 
     // 2. Chọn bot + thông số lệnh ngẫu nhiên
     const randomBotId =

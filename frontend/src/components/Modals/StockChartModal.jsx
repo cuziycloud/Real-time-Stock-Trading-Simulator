@@ -7,7 +7,7 @@ import {
 
 const { Text } = Typography;
 
-const StockChartModal = ({ open, onClose, stockSymbol, currentPrice }) => {
+const StockChartModal = ({ open, onClose, stockSymbol }) => {
   const [data, setData] = useState([]); // Lưu dl ls giá
   const [loading, setLoading] = useState(true); // Trạng thái tải dl
 
@@ -20,7 +20,7 @@ const StockChartModal = ({ open, onClose, stockSymbol, currentPrice }) => {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const res = await axiosClient.get(`/market/history/${stockSymbol}`);
+      const res = await axiosClient.get(`/stocks/history/${stockSymbol}`);
       const formattedData = res.data.map((item) => ({
         price: item.price,
         time: new Date(item.time).toLocaleDateString("vi-VN", {

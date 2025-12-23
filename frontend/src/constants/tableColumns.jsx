@@ -1,4 +1,13 @@
-import { Tag, Typography, Button, Space, Tooltip, Avatar, Switch, Popconfirm } from "antd";
+import {
+  Tag,
+  Typography,
+  Button,
+  Space,
+  Tooltip,
+  Avatar,
+  Switch,
+  Popconfirm,
+} from "antd";
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
@@ -7,6 +16,7 @@ import {
   DeleteOutlined,
   RobotOutlined,
   UserOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 
 const { Text } = Typography;
@@ -304,7 +314,7 @@ export const getAlertColumns = (handleDelete) => [
   },
 ];
 
-export const usersColumns = (handleToggleStatus) => [
+export const usersColumns = (handleToggleStatus, setEditingUser) => [
   {
     title: "ID",
     dataIndex: "id",
@@ -359,24 +369,86 @@ export const usersColumns = (handleToggleStatus) => [
     sorter: (a, b) => a.balance - b.balance,
   },
   {
-    title: "Trạng thái",
-    dataIndex: "isActive",
+    title: "Hành động",
+    key: "action",
     align: "center",
-    render: (isActive, record) => {
-      // Không cho phép tự khóa chính mình hoặc khóa các Bot hệ thống
-      //const isMe = false; // (Có thể check id nếu truyền vào)
+    render: (_, record) => (
+      <Space>
+        {/* Nút Switch Ban/Unban */}
+        <Switch
+          checked={record.isActive}
+          onChange={() => handleToggleStatus(record.id, record.isActive)}
+          disabled={record.role === "ADMIN"}
+          size="small"
+        />
 
-      return (
-        <Space>
-          <Switch
-            checked={isActive}
-            checkedChildren="Active"
-            unCheckedChildren="Banned"
-            onChange={() => handleToggleStatus(record.id, isActive)}
-            disabled={record.role === "ADMIN"} // Không cho khóa Admin khác
+        {/* Nút Edit Mới */}
+        <Button
+          type="primary"
+          ghost
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => setEditingUser(record)} // Set user và mở modal
+        >
+          Sửa
+        </Button>
+      </Space>
+    ),
+  },
+];
+
+export const stocksColumns = (onDelete, onEdit) => [
+  { title: "ID", dataIndex: "id", width: 60, align: "center" },
+  {
+    title: "Mã CK",
+    dataIndex: "symbol",
+    render: (t) => (
+      <Tag color="blue" style={{ fontSize: 14 }}>
+        {t}
+      </Tag>
+    ),
+  },
+  { title: "Tên Công Ty", dataIndex: "companyName" },
+  {
+    title: "Giá Hiện Tại",
+    dataIndex: "price", // Hoặc currentPrice tùy BE trả về
+    render: (p) => (
+      <b style={{ color: "#3f8600" }}>{Number(p).toLocaleString()}</b>
+    ),
+  },
+  {
+    title: "Giá Gốc",
+    dataIndex: "initialPrice",
+    render: (p) => Number(p).toLocaleString(),
+  },
+  {
+    title: "Hành động",
+    key: "action",
+    align: "center",
+    render: (_, record) => (
+      <Space>
+        <Tooltip title="Chỉnh sửa thông tin">
+          <Button
+            type="primary"
+            ghost
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => onEdit(record)}
           />
-        </Space>
-      );
-    },
+        </Tooltip>
+        <Popconfirm
+          title="Hủy niêm yết?"
+          description={`Bạn có chắc chắn muốn xóa mã ${record.symbol} khỏi sàn?`}
+          onConfirm={() => onDelete(record.id, record.symbol)}
+          okText="Xóa Ngay"
+          okButtonProps={{ danger: true }}
+          cancelText="Không"
+        >
+          <Button danger icon={<DeleteOutlined />} size="small">
+            Hủy Niêm Yết
+          </Button>
+        </Popconfirm>
+      </Space>
+    ),
   },
 ];
