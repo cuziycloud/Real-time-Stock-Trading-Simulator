@@ -1,20 +1,14 @@
-import {
-  Injectable,
-  Logger,
-  OnModuleInit,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, OnModuleInit, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Stock } from './entities/stock.entity';
 import { StockHistory } from './entities/stock-history.entity';
 import { CreateStockDto } from './dto/create-stock.dto';
 import { UpdateStockDto } from './dto/update-stock.dto';
+import { StockCandle } from './entities/stock-candle.entity';
 
 @Injectable()
 export class StocksService implements OnModuleInit {
-  private readonly logger = new Logger(StocksService.name);
-
   // Biến Cache RAM: dữ liệu Real-time
   private stocksCache: Stock[] = [];
 
@@ -23,11 +17,12 @@ export class StocksService implements OnModuleInit {
     private stockRepository: Repository<Stock>,
     @InjectRepository(StockHistory)
     private stockHistoryRepository: Repository<StockHistory>,
+    @InjectRepository(StockCandle)
+    private stockCandleRepository: Repository<StockCandle>,
   ) {}
 
   // 1. START: Load dữ liệu từ DB lên RAM
   async onModuleInit() {
-    this.logger.log('Đang tải danh sách cổ phiếu từ DB lên RAM...');
     this.stocksCache = await this.stockRepository.find();
 
     // Nếu DB trống trơn -> Seed dữ liệu mẫu
@@ -39,8 +34,7 @@ export class StocksService implements OnModuleInit {
   }
 
   // 2. LOGIC REAL-TIME
-
-  // Lấy giá nhanh (cho OrderService & Gateway)
+  // Lấy giá all nhanh (cho OrderService & Gateway)
   getRealtimePrices() {
     return this.stocksCache;
   }
@@ -70,11 +64,76 @@ export class StocksService implements OnModuleInit {
       return s;
     });
 
-    // B. Lưu xuống DB (Persistence) & Lưu Lịch sử (History)
-    // Chạy ngầm (void) để không chặn luồng socket
+    // B. Lưu DB (Stock & StockHistory)
+    const savePromises = this.stocksCache.map((s) =>
+      this.stockRepository.save(s),
+    );
+
+    // C. GỌI UPDATE NẾN: Duyệt qua từng mã và cập nhật nến tương ứng
+    const candlePromises = this.stocksCache.map((s) =>
+      this.updateCandle(s.symbol, Number(s.price)),
+    );
+
+    // Chạy song song tất cả (Fire & Forget)
+    void Promise.all([...savePromises, ...candlePromises]);
+
     void this.persistData();
 
     return this.stocksCache;
+  }
+
+  // LOGIC GOM NẾN (AGGREGATION)
+  private async updateCandle(symbol: string, price: number) {
+    // 1. Tính thời điểm bắt đầu của phút hiện tại (vd 10:05:45 -> 10:05:00)
+    const now = new Date();
+    now.setSeconds(0, 0);
+
+    // 2. Tìm xem đã có cây nến của phút này chưa?
+    let candle = await this.stockCandleRepository.findOne({
+      where: { symbol, startTime: now },
+    });
+
+    if (!candle) {
+      // A. Chưa có -> Tạo mới (Open = High = Low = Close = Price hiện tại)
+      candle = this.stockCandleRepository.create({
+        symbol,
+        startTime: now,
+        open: price,
+        high: price,
+        low: price,
+        close: price,
+      });
+    } else {
+      // B. Đã có -> Cập nhật High/Low/Close
+      candle.close = price; // Close luôn là giá mới nhất
+
+      // Cập nhật High nếu giá mới phá đỉnh
+      if (price > Number(candle.high)) {
+        candle.high = price;
+      }
+
+      // Cập nhật Low nếu giá mới thủng đáy
+      if (price < Number(candle.low)) {
+        candle.low = price;
+      }
+    }
+
+    await this.stockCandleRepository.save(candle);
+  }
+
+  // LẤY NẾN (Cho FE)
+  async getCandles(symbol: string) {
+    const candles = await this.stockCandleRepository.find({
+      where: { symbol },
+      order: { startTime: 'DESC' },
+      take: 50, // 50 cây nến gần nhất
+    });
+
+    // Format dl chuẩn cho ApexCharts (x: time, y: [O, H, L, C])
+    return candles.reverse().map((c) => ({
+      x: c.startTime,
+      y: [Number(c.open), Number(c.high), Number(c.low), Number(c.close)],
+    }));
   }
 
   private async persistData() {
@@ -95,8 +154,7 @@ export class StocksService implements OnModuleInit {
     }
   }
 
-  // --- 3. LOGIC CRUD (Cho Admin) ---
-
+  // 3. LOGIC CRUD (Cho Admin)
   async create(dto: CreateStockDto) {
     const newStock = this.stockRepository.create({
       ...dto,

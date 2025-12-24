@@ -41,6 +41,11 @@ export class StocksController {
     return this.stocksService.getHistoryBySymbol(symbol, parseInt(limit, 10));
   }
 
+  @Get('candles/:symbol')
+  getCandles(@Param('symbol') symbol: string) {
+    return this.stocksService.getCandles(symbol);
+  }
+
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRole.ADMIN)
   @Patch(':id')

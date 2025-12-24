@@ -69,7 +69,7 @@ export class BotService {
         ? randomStock.price - Math.random() * variation // Mua thấp hơn xíu
         : randomStock.price + Math.random() * variation; // Bán cao hơn xíu
 
-    const finalPrice = Number(randomPrice.toFixed(2));
+    const finalPrice = Number(Number(randomPrice).toFixed(2));
 
     // 3. Tạo lệnh
     const orderDto: CreateOrderDto = {
