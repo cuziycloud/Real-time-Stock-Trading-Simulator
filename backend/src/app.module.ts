@@ -7,7 +7,6 @@ import { EventsGateway } from './events/events.gateway';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { OrdersModule } from './orders/orders.module';
-import { MarketModule } from './market/market.module';
 import { PaymentModule } from './payment/payment.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { AlertsModule } from './alerts/alerts.module';
@@ -38,7 +37,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     UsersModule,
     AuthModule,
     OrdersModule,
-    MarketModule,
     PaymentModule,
     TelegramModule,
     AlertsModule,

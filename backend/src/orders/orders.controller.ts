@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { AuthGuard } from '@nestjs/passport';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -17,5 +25,10 @@ export class OrdersController {
   @Get('my-orders')
   getMyOrders(@GetUser('id') userId: number) {
     return this.orderService.getMyOrder(userId);
+  }
+
+  @Delete('cancel-order/:id')
+  cancelOrder(@Param('id') id: number, @GetUser('id') userId: number) {
+    return this.orderService.cancelOrder(userId, id);
   }
 }

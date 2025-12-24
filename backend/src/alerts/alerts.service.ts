@@ -56,8 +56,8 @@ export class AlertsService {
       if (!stock) continue;
 
       let isTriggered = false;
-      const currentPrice = stock.price;
-      const target = Number(alert.targetPrice);
+      const currentPrice = stock.price; // Gtt
+      const target = Number(alert.targetPrice); // Giá mong muốn
 
       if (alert.condition === AlertCondition.ABOVE && currentPrice >= target) {
         isTriggered = true; // Giá vượt ngưỡng
@@ -69,7 +69,7 @@ export class AlertsService {
       }
 
       if (isTriggered) {
-        // a. Gửi tin nhắn
+        // a. Gửi tin nhắn (ĐK: đã lk tele bot)
         if (alert.user.telegramChatId) {
           const icon = alert.condition === AlertCondition.ABOVE ? '📈' : '📉';
           const msg =

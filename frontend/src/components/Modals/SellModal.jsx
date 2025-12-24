@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Modal, InputNumber, Alert, Typography, Divider, Space, Tabs, message } from 'antd';
+import { Modal, InputNumber, Alert, Typography, Divider, Space, Tabs, message, Tag } from 'antd';
 import axiosClient from '../../services/axios-client';
 import { calculateExpectedProfit } from '../../utils/calculations';
 import { ORDER_TYPES, MIN_SELL_QUANTITY, DEFAULT_SELL_QUANTITY } from '../../constants/config';
 import { formatCurrency } from '../../utils/formatters';
+import { InfoCircleOutlined } from '@ant-design/icons';
 
 const {Text, Title} = Typography
 
@@ -13,24 +14,83 @@ const SellModal = ({ open, item, onClose, onSuccess }) => {
   const [targetPrice, setTargetPrice] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  // State để quản lý trạng thái input (error/warning/null)
+  const [quantityStatus, setQuantityStatus] = useState(''); // '' | 'error' | 'warning'
+  const [quantityHelp, setQuantityHelp] = useState(''); // Text thông báo lỗi dưới ô input
+
   useEffect(() => {
-    if (item && open) {
-      setTargetPrice(item.price);
-      setQuantity(DEFAULT_SELL_QUANTITY);
+    if (item?.symbol && open) {
+      //setTargetPrice(item.marketPrice);
+      setQuantity(1);
       setOrderType(ORDER_TYPES.MARKET);
+      // Reset validation
+      setQuantityStatus('');
+      setQuantityHelp('');
     }
-  }, [item, open]);
+  }, [open, item?.symbol]);
+
+   const handleQuantityChange = (val) => {
+    setQuantity(val);
+
+    if (val === null || val === undefined) {
+        setQuantityStatus('error');
+        setQuantityHelp('Vui lòng nhập số lượng');
+        return;
+    }
+    if (val <= 0) {
+        setQuantityStatus('error');
+        setQuantityHelp('Số lượng phải lớn hơn 0');
+        return;
+    }
+    if (!Number.isInteger(val)) {
+        setQuantityStatus('error');
+        setQuantityHelp('Số lượng phải là số nguyên (không được lẻ)');
+        return;
+    }
+    if (val > item.quantity) {
+        setQuantityStatus('warning');
+        setQuantityHelp(`Vượt quá số lượng đang có (${item.quantity}). Sẽ tự động bán hết số hiện có.`);
+        return;
+    }
+    setQuantityStatus('');
+    setQuantityHelp('');
+  }
 
   const handleSell = async () => {
     if (!item) return;
 
+    // 1. Validate Số lượng
+    if (!quantity || quantity <= 0) {
+        message.error("Số lượng không hợp lệ!");
+        return;
+    }
+    if (!Number.isInteger(quantity)) {
+        message.error("Số lượng cổ phiếu phải là số nguyên!");
+        return;
+    }
+
+    // 2. Auto-correct: Nếu nhập quá -> Lấy max
+    let finalQuantity = quantity;
+    if (quantity > item.quantity) {
+        finalQuantity = item.quantity;
+        message.warning(`Đã tự động điều chỉnh về số lượng tối đa: ${item.quantity}`);
+    }
+
+    // 3. Validate Giá (Nếu là Limit)
+    if (orderType === ORDER_TYPES.LIMIT) {
+        if (!targetPrice || targetPrice <= 0) {
+            message.error("Giá đặt bán phải lớn hơn 0!");
+            return;
+        }
+    }
+
     setLoading(true);
     try {
       if (orderType === ORDER_TYPES.MARKET) {
-        // Bán ngay theo giá thị trường
+        // Bán ngay theo gtt
         const res = await axiosClient.post('/users/sell', {
           symbol: item.symbol,
-          quantity,
+          quantity: finalQuantity,
           price: item.marketPrice,
         });
 
@@ -41,17 +101,22 @@ const SellModal = ({ open, item, onClose, onSuccess }) => {
         // Đặt lệnh chờ bán (Limit Order)
         if (targetPrice <= 0) {
           message.error('Vui lòng nhập giá mong muốn bán hợp lệ!');
+          setLoading(false);
           return;
         }
 
-        await axiosClient.post('/orders/place', {
+        const res = await axiosClient.post('/orders/place', {
           symbol: item.symbol,
           direction: 'SELL',
-          quantity,
+          quantity: finalQuantity,
           targetPrice,
         });
 
-        message.success('Đã đặt lệnh chờ bán thành công');
+        if (res.data.status === 'MATCHED') {
+            message.success(`Khớp lệnh ngay lập tức! Đã bán ${quantity} ${item.symbol}`);
+        } else {
+            message.info('Đã đặt lệnh chờ mua thành công. Vui lòng theo dõi trong Sổ Lệnh.');
+        }
       }
 
       onSuccess();
@@ -65,43 +130,101 @@ const SellModal = ({ open, item, onClose, onSuccess }) => {
 
   if (!item) return null;
 
-  // Tính toán cho Market Order
-  const marketRevenue = item.marketPrice * quantity;
-  const marketProfit = calculateExpectedProfit(
-    item.marketPrice,
-    item.avgPrice,
-    quantity
+  // Tính toán hiển thị
+  const revenuePrice = orderType === ORDER_TYPES.MARKET ? item.marketPrice : targetPrice;
+  // Tính tiền dựa trên số lượng "Thực tế sẽ bán" (nếu nhập lố thì tính theo max)
+  const calcQuantity = quantity > item.quantity ? item.quantity : quantity;
+  
+  const totalRevenue = revenuePrice * (calcQuantity || 0); // Handle null/0
+  const expectedProfit = calculateExpectedProfit(revenuePrice, item.avgPrice, calcQuantity || 0);
+  const isProfitable = expectedProfit >= 0;
+
+  // Render Form Input dùng chung
+  const renderFormContent = (isLimit) => (
+    <Space orientation="vertical" style={{ width: '100%' }}>
+        <Alert
+            title={isLimit ? "Lệnh khớp khi giá thị trường TĂNG lên mức bạn đặt" : "Bán ngay lập tức với giá hiện tại"}
+            type={isLimit ? "info" : "warning"}
+            showIcon
+        />
+        
+        <div style={{display: 'flex', gap: 10, marginBottom: 10}}>
+            <Tag color="blue">Giá vốn: {formatCurrency(item.avgPrice)}</Tag>
+            <Tag color={item.marketPrice >= item.avgPrice ? "green" : "red"}>
+                Giá TT: {formatCurrency(item.marketPrice)}
+            </Tag>
+        </div>
+
+        {/* Input Giá (Chỉ hiện nếu Limit) - CHO PHÉP SỐ THẬP PHÂN */}
+        {isLimit && (
+            <div>
+                <Text>Giá muốn bán: </Text>
+                <InputNumber
+                    style={{ width: '100%', marginTop: 5 }}
+                    value={targetPrice}
+                    onChange={setTargetPrice}
+                    min={0.01} // Cho phép số nhỏ
+                    step={0.1} // Bước nhảy nhỏ
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
+                />
+            </div>
+        )}
+
+        {/* Input Số lượng - CHỈ CHO SỐ NGUYÊN */}
+        <div>
+            <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                <Text>Số lượng bán:</Text>
+                <Text type="secondary" style={{fontSize: 12}}>Có sẵn: {item.quantity}</Text>
+            </div>
+            
+            <InputNumber
+                min={1}
+                // precision={0} // Bắt buộc số nguyên ở UI
+                step={1}
+                value={quantity}
+                onChange={handleQuantityChange} 
+                style={{ width: '100%', marginTop: 5 }}
+                status={quantityStatus} // error hoặc warning
+                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                parser={(value) => value?.replace(/\$\s?|(,*)/g, '')}
+            />
+            
+            {/* Hiển thị dòng thông báo lỗi/cảnh báo ngay dưới input */}
+            {quantityHelp && (
+                <div style={{ color: quantityStatus === 'error' ? '#ff4d4f' : '#faad14', fontSize: 12, marginTop: 4 }}>
+                    {quantityStatus === 'error' ? <InfoCircleOutlined /> : '⚠️'} {quantityHelp}
+                </div>
+            )}
+        </div>
+
+        <Divider style={{ margin: '10px 0' }} />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Text>Tổng thu về:</Text>
+            <Title level={4} style={{ margin: 0, color: '#008000' }}>
+                {formatCurrency(totalRevenue)} VND
+            </Title>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Text>{isProfitable ? 'Lãi dự kiến:' : 'Lỗ dự kiến:'}</Text>
+            <Title level={4} style={{ margin: 0, color: isProfitable ? '#3f8600' : '#cf1322' }}>
+                {formatCurrency(expectedProfit)} VND
+            </Title>
+        </div>
+    </Space>
   );
-
-  // Tính toán cho Limit Order
-  const limitRevenue = targetPrice * quantity;
-  const limitProfit = calculateExpectedProfit(
-    targetPrice,
-    item.avgPrice,
-    quantity
-  );
-
-  const isProfitable = orderType === ORDER_TYPES.MARKET 
-    ? marketProfit >= 0 
-    : limitProfit >= 0;
-
-  const totalRevenue = orderType === ORDER_TYPES.MARKET 
-    ? marketRevenue 
-    : limitRevenue;
-
-  const expectedProfit = orderType === ORDER_TYPES.MARKET 
-    ? marketProfit 
-    : limitProfit;
 
   return (
     <Modal
-      title={`Đặt Lệnh Bán: ${item.symbol}`}
+      title={`Bán Cổ Phiếu: ${item.symbol}`}
       open={open}
       onOk={handleSell}
       onCancel={onClose}
-      okText={orderType === ORDER_TYPES.MARKET ? 'Bán Ngay' : 'Đặt Lệnh Chờ'}
+      okText={orderType === ORDER_TYPES.MARKET ? 'Bán Ngay' : 'Đặt Lệnh'}
+      okButtonProps={{ danger: true, loading }}
       cancelText="Hủy"
-      confirmLoading={loading}
     >
       <Tabs
         activeKey={orderType}
@@ -110,150 +233,8 @@ const SellModal = ({ open, item, onClose, onSuccess }) => {
           if (key === ORDER_TYPES.LIMIT) setTargetPrice(item.marketPrice);
         }}
         items={[
-          {
-            key: ORDER_TYPES.MARKET,
-            label: 'Lệnh Thị Trường',
-            children: (
-              <Space orientation="vertical" style={{ width: '100%' }}>
-                <Alert
-                  title="Lệnh sẽ bán ngay với giá thị trường hiện tại"
-                  type="warning"
-                  showIcon
-                />
-                <Alert
-                  title={`Giá thị trường: ${formatCurrency(item.marketPrice)} VND`}
-                  type="info"
-                  showIcon
-                />
-                <Alert
-                  title={`Giá vốn của bạn: ${formatCurrency(item.avgPrice)} VND`}
-                  type="info"
-                  showIcon
-                />
-
-                <div>
-                  <Text>Số lượng bán (Max: {item.quantity}): </Text>
-                  <InputNumber
-                    min={1}
-                    max={item.quantity}
-                    value={quantity}
-                    onChange={(value) => setQuantity(value)}
-                    style={{ width: '100%', marginTop: 8 }}
-                  />
-                </div>
-
-                <Divider style={{ margin: '10px 0' }} />
-
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text>Tổng tiền thu về: </Text>
-                  <Title level={4} style={{ margin: 0, color: '#008000' }}>
-                    {formatCurrency(totalRevenue)} VND
-                  </Title>
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text>{isProfitable ? 'Lãi dự kiến:' : 'Lỗ dự kiến:'}</Text>
-                  <Title
-                    level={4}
-                    style={{
-                      margin: 0,
-                      color: isProfitable ? '#3f8600' : '#cf1322',
-                    }}
-                  >
-                    {formatCurrency(expectedProfit)} VND
-                  </Title>
-                </div>
-              </Space>
-            ),
-          },
-          {
-            key: ORDER_TYPES.LIMIT,
-            label: 'Lệnh Giới Hạn',
-            children: (
-              <Space orientation="vertical" style={{ width: '100%' }}>
-                <Alert
-                  title="Lệnh chỉ khớp khi giá thị trường CHẠM mức giá bạn đặt"
-                  type="info"
-                  showIcon
-                />
-                <Alert
-                  title={`Giá vốn của bạn: ${formatCurrency(item.avgPrice)} VND`}
-                  type="info"
-                  showIcon
-                />
-
-                <div>
-                  <Text>Giá muốn bán (Target Price): </Text>
-                  <InputNumber
-                    style={{ width: '100%', marginTop: 8 }}
-                    value={targetPrice}
-                    onChange={setTargetPrice}
-                    min={0}
-                  />
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Lệnh sẽ khớp khi giá thị trường ≥ {formatCurrency(targetPrice)} VND
-                  </Text>
-                </div>
-
-                <div>
-                  <Text>Số lượng bán (Max: {item.quantity}): </Text>
-                  <InputNumber
-                    min={1}
-                    max={item.quantity}
-                    value={quantity}
-                    onChange={(value) => setQuantity(value)}
-                    style={{ width: '100%', marginTop: 8 }}
-                  />
-                </div>
-
-                <Divider style={{ margin: '10px 0' }} />
-
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text>Tổng tiền dự kiến: </Text>
-                  <Title level={4} style={{ margin: 0, color: '#008000' }}>
-                    {formatCurrency(totalRevenue)} VND
-                  </Title>
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Text>{isProfitable ? 'Lãi dự kiến:' : 'Lỗ dự kiến:'}</Text>
-                  <Title
-                    level={4}
-                    style={{
-                      margin: 0,
-                      color: isProfitable ? '#3f8600' : '#cf1322',
-                    }}
-                  >
-                    {formatCurrency(expectedProfit)} VND
-                  </Title>
-                </div>
-              </Space>
-            ),
-          },
+          { key: ORDER_TYPES.MARKET, label: 'Lệnh Thị Trường', children: renderFormContent(false) },
+          { key: ORDER_TYPES.LIMIT, label: 'Lệnh Giới Hạn', children: renderFormContent(true) },
         ]}
       />
     </Modal>

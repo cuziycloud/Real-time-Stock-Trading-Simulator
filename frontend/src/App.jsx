@@ -68,17 +68,23 @@ function App() {
   // Stocks & Real-time
   const [stocks, setStocks] = useState([]);
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
   // Socket connection
   useSocket(
     isAuthenticated,
     userInfo,
     (data) => setStocks(data), // onMarketUpdate
-    () => refreshUserData() // onOrderMatched
+    () => {
+      // onOrderMatched: lệnh khớp
+      refreshUserData(); // cập nhật balance, portfolio
+      setRefreshKey((prev) => prev + 1); //reload sổ lệnh/ history (đang mở)
+    }
   );
 
   // Modals
-  const [buyModal, setBuyModal] = useState({ open: false, stock: null });
-  const [sellModal, setSellModal] = useState({ open: false, item: null });
+  const [buyModal, setBuyModal] = useState({ open: false, symbol: null });
+  const [sellModal, setSellModal] = useState({ open: false, symbol: null });
   const [bankingModal, setBankingModal] = useState({ open: false, type: "" });
   const [leaderboardModal, setLeaderboardModal] = useState(false);
   const [chartModal, setChartModal] = useState({ open: false, stock: null });
@@ -98,8 +104,8 @@ function App() {
   const [isAdminMode, setIsAdminMode] = useState(false);
 
   // Handlers
-  const showBuyModal = (stock) => setBuyModal({ open: true, stock });
-  const showSellModal = (item) => setSellModal({ open: true, item });
+  const showBuyModal = (stock) => setBuyModal({ open: true, symbol: stock.symbol });
+  const showSellModal = (item) => setSellModal({ open: true, symbol: item.symbol });
   const showChart = (stock) => setChartModal({ open: true, stock });
   const showAddAlert = (stockRecord) => {
     setAddAlertModal({ open: true, symbol: stockRecord.symbol });
@@ -110,6 +116,13 @@ function App() {
 
   // Stock columns
   const stockColumns = getStockColumns(showChart, showBuyModal, showAddAlert);
+
+  // Tìm stock object mới nhất từ mảng stocks realtime
+  const currentBuyStock = stocks.find(s => s.symbol === buyModal.symbol);
+  const currentSellItem = portfolioData?.find(p => p.symbol === sellModal.symbol);
+  
+  // Tương tự cho Chart
+  const currentChartStock = stocks.find(s => s.symbol === chartModal.symbol);
 
   // Guard: Not authenticated
   if (!isAuthenticated) {
@@ -272,15 +285,15 @@ function App() {
         {/* Modals */}
         <BuyModal
           open={buyModal.open}
-          stock={buyModal.stock}
-          onClose={() => setBuyModal({ open: false, stock: null })}
+          stock={currentBuyStock}
+          onClose={() => setBuyModal({ open: false, symbol: null })}
           onSuccess={refreshUserData}
         />
 
         <SellModal
           open={sellModal.open}
-          item={sellModal.item}
-          onClose={() => setSellModal({ open: false, item: null })}
+          item={currentSellItem}
+          onClose={() => setSellModal({ open: false, symbol: null })}
           onSuccess={refreshUserData}
         />
 
@@ -301,7 +314,7 @@ function App() {
         <TelegramModal
           open={telegramModal}
           onClose={() => setTelegramModal(false)}
-          onSuccess={refreshUserData} 
+          onSuccess={refreshUserData}
         />
 
         <AddAlertModal
@@ -323,7 +336,7 @@ function App() {
             open={chartModal.open}
             onClose={() => setChartModal({ open: false, stock: null })}
             stockSymbol={chartModal.stock?.symbol}
-            currentPrice={chartModal.stock?.price}
+            currentPrice={currentChartStock?.price} 
           />
         )}
 
@@ -338,11 +351,13 @@ function App() {
         <HistoryDrawer
           open={historyDrawer}
           onClose={() => setHistoryDrawer(false)}
+          refreshTrigger={refreshKey}
         />
 
         <OrdersDrawer
           open={ordersDrawer}
           onClose={() => setOrdersDrawer(false)}
+          refreshTrigger={refreshKey}
         />
       </Layout>
     </ConfigProvider>

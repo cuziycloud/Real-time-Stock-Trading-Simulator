@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Drawer, Table, message, Spin } from 'antd';
 import { OrderedListOutlined } from '@ant-design/icons';
 import axiosClient from '../../services/axios-client';
-import { orderColumns } from '../../constants/tableColumns';
+import { getOrderColumns } from '../../constants/tableColumns';
 
-const OrdersDrawer = ({ open, onClose }) => {
+const OrdersDrawer = ({ open, onClose, refreshTrigger }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -12,7 +12,7 @@ const OrdersDrawer = ({ open, onClose }) => {
     if (open) {
       fetchOrders();
     }
-  }, [open]);
+  }, [open, refreshTrigger]); // Reload khi mở drawer / có lệnh khớp mới
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -25,6 +25,20 @@ const OrdersDrawer = ({ open, onClose }) => {
       setLoading(false);
     }
   };
+
+  const handleCancelOrder = async (orderId) => {
+    try {
+      await axiosClient.delete(`/orders/cancel-order/${orderId}`);
+      message.success("Đã hủy lệnh thành công");
+      
+      // Reload lại ds để thấy trạng thái đổi
+      fetchOrders(); 
+    } catch (error) {
+      message.error(error.response?.data?.message || "Hủy thất bại");
+    }
+  };
+
+  const orderColumns = getOrderColumns(handleCancelOrder);
 
   return (
     <Drawer

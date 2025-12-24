@@ -8,8 +8,8 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { AlertsService } from 'src/alerts/alerts.service';
-import { MarketService } from 'src/market/market.service';
 import { OrdersService } from 'src/orders/orders.service';
+import { StocksService } from 'src/stocks/stocks.service';
 
 @WebSocketGateway({ cors: true })
 export class EventsGateway implements OnGatewayInit {
@@ -18,7 +18,7 @@ export class EventsGateway implements OnGatewayInit {
 
   constructor(
     private ordersService: OrdersService,
-    private marketService: MarketService,
+    private stockService: StocksService,
     private alertsService: AlertsService,
   ) {}
 
@@ -32,7 +32,7 @@ export class EventsGateway implements OnGatewayInit {
     console.log(`User ${userId} đã vào phòng: ${roomName}`);
     //console.log(`Client ${client.id} đã vào phòng: ${roomName}`);
   }
-  afterInit(server: Server) {
+  afterInit() {
     console.log('Socket Gateway khởi động');
 
     setInterval(() => {
@@ -41,7 +41,7 @@ export class EventsGateway implements OnGatewayInit {
   }
 
   async handleMarketFluctuation() {
-    const newStocks = this.marketService.updateMarketPrices();
+    const newStocks = this.stockService.updateMarketPrices();
     //const marketData: StockPriceDto[] = this.stocks;
 
     this.server.emit('market-update', newStocks); // Gửi giá mới cho FE

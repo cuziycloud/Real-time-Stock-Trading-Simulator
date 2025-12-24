@@ -6,8 +6,10 @@ import { User, UserRole } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { TradeStockDto } from './dto/trade-stock.dto';
 import { Transaction } from './entities/transaction.entity';
-import { MarketService } from 'src/market/market.service';
 import * as bcrypt from 'bcrypt';
+import { RegisterDto } from 'src/auth/dto/register.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { StocksService } from 'src/stocks/stocks.service';
 
 @Injectable()
 export class UsersService implements OnModuleInit {
@@ -18,7 +20,7 @@ export class UsersService implements OnModuleInit {
     private portfolioRepository: Repository<Portfolio>,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
-    private marketService: MarketService,
+    private stockService: StocksService,
   ) {}
 
   async onModuleInit() {
@@ -53,7 +55,7 @@ export class UsersService implements OnModuleInit {
   async createMockUser() {
     const user = this.userRepository.create({
       username: 'Tran My Van',
-      balance: 100000000,
+      balance: 0,
     });
     return this.userRepository.save(user);
   }
@@ -141,7 +143,7 @@ export class UsersService implements OnModuleInit {
       relations: ['portfolio'],
     });
 
-    if (!user) throw new BadRequestException('User khogn ton tai');
+    if (!user) throw new BadRequestException('User khong ton tai');
 
     const portfolioItem = await this.portfolioRepository.findOne({
       where: {
@@ -236,6 +238,8 @@ export class UsersService implements OnModuleInit {
 
     if (!user) throw new BadRequestException('Không tìm thấy người dùng');
 
+    if (Number(user.balance) < amount)
+      throw new BadRequestException('Số dư không đủ');
     // Trừ tiền
     user.balance = Number(user.balance) - amount;
     await this.userRepository.save(user);
@@ -253,9 +257,12 @@ export class UsersService implements OnModuleInit {
   }
 
   async getLeaderboard() {
-    const users = await this.userRepository.find({ relations: ['portfolio'] });
+    const users = await this.userRepository.find({
+      where: { isBot: false, role: UserRole.USER },
+      relations: ['portfolio'],
+    });
 
-    const currentPrices = this.marketService.getCurrentPrices();
+    const currentPrices = this.stockService.getRealtimePrices();
 
     const leaderboard = users.map((user) => {
       let stockValue = 0;
@@ -284,9 +291,31 @@ export class UsersService implements OnModuleInit {
     return username.substring(0, 2) + '***' + username.slice(-2);
   }
 
-  async create(createUserDto: CreateUserDto) {
-    const newUser = this.userRepository.create(createUserDto);
+  async register(registerDto: RegisterDto) {
+    const newUser = this.userRepository.create(registerDto);
     return this.userRepository.save(newUser);
+  }
+
+  // C
+  async createUser(createUserDto: CreateUserDto) {
+    const existingUser = await this.userRepository.findOne({
+      where: { email: createUserDto.email },
+    });
+    if (existingUser) {
+      throw new BadRequestException('Email này đã tồn tại');
+    }
+
+    // 2. Mã hóa mật khẩu (Hashing)
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
+
+    // 3. Tạo User mới với mật khẩu đã băm
+    const newUser = this.userRepository.create({
+      ...createUserDto,
+      password: hashedPassword,
+    });
+
+    return await this.userRepository.save(newUser);
   }
 
   async createBot(username: string) {
@@ -342,14 +371,67 @@ export class UsersService implements OnModuleInit {
         'email',
         'balance',
         'isBot',
+        'role',
         'createdAt',
         'isActive',
       ],
+      order: { createdAt: 'DESC' },
     });
   }
 
+  // D
   async updateStatus(id: number, isActive: boolean) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new BadRequestException('User không tồn tại');
+    if (user.role === UserRole.ADMIN) {
+      throw new BadRequestException('Không thể khóa tài khoản Admin');
+    }
     await this.userRepository.update(id, { isActive });
     return { message: `User ${id} is now ${isActive ? 'Active' : 'Banned'}` };
+  }
+
+  // U
+  async updateUser(id: number, updateUserDto: UpdateUserDto) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new BadRequestException('Không tìm thấy user');
+
+    if (updateUserDto.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+    }
+
+    await this.userRepository.update(id, {
+      ...updateUserDto,
+    });
+    return { message: 'Cập nhật thành công' };
+  }
+
+  async getSystemStats() {
+    const totalUsers = await this.userRepository.count({
+      where: {
+        role: UserRole.USER,
+        isBot: false,
+      },
+    });
+
+    const totalBots = await this.userRepository.count({
+      where: { isBot: true },
+    });
+    //console.log(totalUser);
+
+    const result = await this.userRepository
+      .createQueryBuilder('user')
+      .where('user.role = :role', { role: UserRole.USER })
+      .andWhere('user.isBot = :isBot', { isBot: false })
+      .select('SUM(user.balance)', 'totalMoney')
+      .getRawOne<{ totalMoney: string }>();
+
+    const rawTotalMoney = result ? result.totalMoney : '0';
+
+    return {
+      totalUsers,
+      totalBots,
+      totalMoney: Number(rawTotalMoney),
+    };
   }
 }

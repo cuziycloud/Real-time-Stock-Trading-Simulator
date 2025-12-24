@@ -1,39 +1,84 @@
-import { useState, useEffect } from "react";
-import axiosClient from "../../services/axios-client";
-import { message, Modal, Typography, Spin } from "antd";
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
-} from 'recharts';
+import { useEffect, useState } from 'react';
+import { Modal, Spin, message, Typography } from 'antd';
+import ReactApexChart from 'react-apexcharts';
+import axiosClient from '../../services/axios-client';
 
 const { Text } = Typography;
 
-const StockChartModal = ({ open, onClose, stockSymbol, currentPrice }) => {
-  const [data, setData] = useState([]); // Lưu dl ls giá
-  const [loading, setLoading] = useState(true); // Trạng thái tải dl
+const StockChartModal = ({ open, onClose, stockSymbol }) => {
+  // ApexCharts cần dữ liệu đầu vào là một mảng các series
+  // Format: [{ data: [{x: ngày, y: [O,H,L,C]}, ...] }]
+  const [series, setSeries] = useState([]); 
+  const [loading, setLoading] = useState(true);
+
+  // -CẤU HÌNH BIỂU ĐỒ (CHART OPTIONS)
+  const chartOptions = {
+    chart: {
+      type: 'candlestick',
+      height: 350,
+      toolbar: { show: false }, // Ẩn thanh công cụ mặc định
+    },
+    xaxis: {
+      type: 'datetime', // Trục hoành: thời gian
+      labels: {
+        datetimeFormatter: {
+            year: 'yyyy',
+            month: 'MMM \'yy',
+            day: 'dd MMM',
+            hour: 'HH:mm', // Hiển thị giờ:phút vì nến 1 phút
+        }
+      }
+    },
+    yaxis: {
+      tooltip: {
+        enabled: true, // Di chuột vào hiện giá chi tiết
+      },
+      labels: {
+        formatter: (value) => value.toFixed(2) // Format giá 2 số lẻ
+      }
+    },
+    plotOptions: {
+      candlestick: {
+        colors: {
+          upward: '#3f8600',   // Nến Tăng: Màu Xanh lá
+          downward: '#cf1322'  // Nến Giảm: Màu Đỏ
+        },
+        wick: {
+          useFillColor: true, // Râu nến trùng màu thân nến
+        }
+      }
+    },
+    tooltip: {
+      theme: 'dark',
+    }
+  };
 
   useEffect(() => {
     if (open && stockSymbol) {
-      fetchHistory();
+      fetchCandles();
     }
   }, [open, stockSymbol]);
 
-  const fetchHistory = async () => {
+  const fetchCandles = async () => {
     setLoading(true);
     try {
-      const res = await axiosClient.get(`/market/history/${stockSymbol}`);
-      const formattedData = res.data.map((item) => ({
-        price: item.price,
-        time: new Date(item.time).toLocaleDateString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
+      const res = await axiosClient.get(`/stocks/candles/${stockSymbol}`);
+      
+      // Be trả về: { x: '2023-12-24T10:00:00', y: [10, 12, 9, 11] }
+      // ApexCharts cần x: timestamp/ Date object, y: mảng số
+      // Dl từ be đã chuẩn format y: [O, H, L, C], chỉ cần map x
+      const chartData = res.data.map(item => ({
+        x: new Date(item.x), // Chuyển string ngày tháng => Date Object
+        y: item.y 
       }));
 
-      setData(formattedData);
-    } catch (error) {
-      message.error("Không lấy được dữ liệu biểu đồ");
-      console.error("Lỗi fetch lịch sử giá: ", error);
+      setSeries([{
+        name: 'Giá',
+        data: chartData
+      }]);
+
+    } catch {
+      message.error("Không tải được dữ liệu nến");
     } finally {
       setLoading(false);
     }
@@ -43,70 +88,33 @@ const StockChartModal = ({ open, onClose, stockSymbol, currentPrice }) => {
     <Modal
       title={
         <span>
-          Biểu đồ biến động: <b style={{ color: "#1890ff" }}>{stockSymbol}</b>
+            Biểu đồ kỹ thuật: <b style={{color: '#1890ff', fontSize: 18}}>{stockSymbol} (1 phút)</b> 
         </span>
       }
       open={open}
       onCancel={onClose}
       footer={null}
-      width={800}
+      width={800} // Rộng của chart
+      centered
     >
-      {loading ? ( // Nếu đang tải: Spin
-        <div
-          style={{
-            height: 350,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Spin fullscreen tip="Loading..." size="large" />
+      {loading ? (
+        <div style={{ height: 350, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Spin tip="Đang tải dữ liệu thị trường..." size="large" />
         </div>
       ) : (
-        // Ngược lại: biểu đồ
-        <div style={{ width: "100%", height: 350 }}>
-          <ResponsiveContainer>
-            {" "}
-            {/* Giúp biểu đồ tự co giãn */}
-            <AreaChart
-              data={data}
-              margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1890ff" stopOpacity={0.8} />
-                  <stop offset="5%" stopColor="#1890ff" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical="false" />{" "}
-              {/* Lưới */}
-              <XAxis dataKey="time" minTickGap={30} tick={{ fontSize: 12 }} />
-              <YAxis
-                domain={["auto", "auto"]}
-                orientation="right"
-                tick={{ fontSize: 12 }}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 8,
-                  border: "none",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.15",
-                }}
-                formatter={(value) => [
-                  `${Number(value).toLocaleString()} VND`,
-                  "Giá",
-                ]}
-              />
-              <Area 
-                type="monotone"
-                dataKey="price"
-                stroke="#1890ff"
-                fillOpacity={1}
-                fill="url(#colorPrice)"
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div style={{ width: '100%', height: 380 }}>
+          {series.length > 0 && series[0].data.length > 0 ? (
+             <ReactApexChart 
+                options={chartOptions} 
+                series={series} 
+                type="candlestick" 
+                height={350} 
+             />
+          ) : (
+             <div style={{textAlign: 'center', marginTop: 100, color: '#888'}}>
+                Chưa có dữ liệu nến cho mã này (Chờ server chạy 1 lát nhé...)
+             </div>
+          )}
         </div>
       )}
     </Modal>

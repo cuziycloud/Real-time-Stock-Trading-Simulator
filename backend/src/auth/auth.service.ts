@@ -24,10 +24,9 @@ export class AuthService {
     // Salt rounds: Độ khó khi băm - càng cao càng an toàn >< càng chậm
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(registerDto.password, salt);
-    const newUser = await this.usersService.create({
+    const newUser = await this.usersService.register({
       ...registerDto,
       password: hashedPassword,
-      isBot: false,
     });
 
     return {

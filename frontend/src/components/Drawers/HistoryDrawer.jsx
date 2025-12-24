@@ -4,7 +4,7 @@ import { HistoryOutlined } from '@ant-design/icons';
 import axiosClient from '../../services/axios-client';
 import { historyColumns } from '../../constants/tableColumns';
 
-const HistoryDrawer = ({ open, onClose }) => {
+const HistoryDrawer = ({ open, onClose, refreshTrigger }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -12,7 +12,7 @@ const HistoryDrawer = ({ open, onClose }) => {
     if (open) {
       fetchHistory();
     }
-  }, [open]);
+  }, [open, refreshTrigger]);
 
   const fetchHistory = async () => {
     setLoading(true);
