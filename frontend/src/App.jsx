@@ -51,6 +51,7 @@ import AlertsDrawer from "./components/Drawers/AlertsDrawer";
 import AddAlertModal from "./components/Modals/AddAlertModal";
 import TelegramModal from "./components/Modals/TelegramModal";
 import AdminPage from "./components/Admin/AdminPage";
+import AiChatWidget from "./components/Widgets/AiChatWidget";
 
 const { Content } = Layout;
 const { Title } = Typography;
@@ -104,8 +105,10 @@ function App() {
   const [isAdminMode, setIsAdminMode] = useState(false);
 
   // Handlers
-  const showBuyModal = (stock) => setBuyModal({ open: true, symbol: stock.symbol });
-  const showSellModal = (item) => setSellModal({ open: true, symbol: item.symbol });
+  const showBuyModal = (stock) =>
+    setBuyModal({ open: true, symbol: stock.symbol });
+  const showSellModal = (item) =>
+    setSellModal({ open: true, symbol: item.symbol });
   const showChart = (stock) => setChartModal({ open: true, stock });
   const showAddAlert = (stockRecord) => {
     setAddAlertModal({ open: true, symbol: stockRecord.symbol });
@@ -118,11 +121,13 @@ function App() {
   const stockColumns = getStockColumns(showChart, showBuyModal, showAddAlert);
 
   // Tìm stock object mới nhất từ mảng stocks realtime
-  const currentBuyStock = stocks.find(s => s.symbol === buyModal.symbol);
-  const currentSellItem = portfolioData?.find(p => p.symbol === sellModal.symbol);
-  
+  const currentBuyStock = stocks.find((s) => s.symbol === buyModal.symbol);
+  const currentSellItem = portfolioData?.find(
+    (p) => p.symbol === sellModal.symbol
+  );
+
   // Tương tự cho Chart
-  const currentChartStock = stocks.find(s => s.symbol === chartModal.symbol);
+  const currentChartStock = stocks.find((s) => s.symbol === chartModal.symbol);
 
   // Guard: Not authenticated
   if (!isAuthenticated) {
@@ -279,6 +284,7 @@ function App() {
           )}
         </Content>
 
+        {isAuthenticated && <AiChatWidget />}
         {/* Footer */}
         <AppFooter />
 
@@ -336,7 +342,7 @@ function App() {
             open={chartModal.open}
             onClose={() => setChartModal({ open: false, stock: null })}
             stockSymbol={chartModal.stock?.symbol}
-            currentPrice={currentChartStock?.price} 
+            currentPrice={currentChartStock?.price}
           />
         )}
 

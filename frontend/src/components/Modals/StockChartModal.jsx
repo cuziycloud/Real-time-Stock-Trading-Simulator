@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, Spin, message, Typography } from 'antd';
 import ReactApexChart from 'react-apexcharts';
 import axiosClient from '../../services/axios-client';
@@ -8,10 +8,11 @@ const { Text } = Typography;
 const StockChartModal = ({ open, onClose, stockSymbol }) => {
   // ApexCharts cần dữ liệu đầu vào là một mảng các series
   // Format: [{ data: [{x: ngày, y: [O,H,L,C]}, ...] }]
-  const [series, setSeries] = useState([]); 
+  const [series, setSeries] = useState([]);  // lưu trữ dl biểu đồ
   const [loading, setLoading] = useState(true);
 
-  // -CẤU HÌNH BIỂU ĐỒ (CHART OPTIONS)
+   const timerRef = useRef(null);
+  // CẤU HÌNH BIỂU ĐỒ (CHART OPTIONS)
   const chartOptions = {
     chart: {
       type: 'candlestick',
@@ -19,29 +20,30 @@ const StockChartModal = ({ open, onClose, stockSymbol }) => {
       toolbar: { show: false }, // Ẩn thanh công cụ mặc định
     },
     xaxis: {
-      type: 'datetime', // Trục hoành: thời gian
+      type: 'datetime', // Thời gian
       labels: {
+        datetimeUTC: false,  // Không theo giờ utc, theo giờ trên mt
         datetimeFormatter: {
             year: 'yyyy',
             month: 'MMM \'yy',
             day: 'dd MMM',
-            hour: 'HH:mm', // Hiển thị giờ:phút vì nến 1 phút
+            hour: 'HH:mm', // Hiển thị HH:mm vì là nến 1 phút
         }
       }
     },
-    yaxis: {
+    yaxis: { // Giá
       tooltip: {
-        enabled: true, // Di chuột vào hiện giá chi tiết
+        enabled: true, // Di chuột vào sẽ hiện giá chi tiết
       },
       labels: {
-        formatter: (value) => value.toFixed(2) // Format giá 2 số lẻ
+        formatter: (value) => value.toFixed(2)
       }
     },
     plotOptions: {
       candlestick: {
         colors: {
-          upward: '#3f8600',   // Nến Tăng: Màu Xanh lá
-          downward: '#cf1322'  // Nến Giảm: Màu Đỏ
+          upward: '#3f8600',   // Nến Tăng: Màu Xanh lá (giá đóng cửa cao hơn giá mở cửa)
+          downward: '#cf1322'  // Nến Giảm: Màu Đỏ (giá đóng thấp hơn giá mở)
         },
         wick: {
           useFillColor: true, // Râu nến trùng màu thân nến
@@ -55,12 +57,25 @@ const StockChartModal = ({ open, onClose, stockSymbol }) => {
 
   useEffect(() => {
     if (open && stockSymbol) {
-      fetchCandles();
+      // 1. Lấy dữ liệu lần đầu ngay lập tức
+      fetchCandles(true);
+
+      // 2. Thiết lập cơ chế "quẹt" dữ liệu mới mỗi 5s
+      timerRef.current = setInterval(() => {
+        fetchCandles(false); // false để nó cập nhật ngầm, chỉ loading lần đầu
+      }, 5000);
+
+      // 3. Clean: đóng modal, đổi mã => xóa timer
+      return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
     }
   }, [open, stockSymbol]);
 
-  const fetchCandles = async () => {
-    setLoading(true);
+  const fetchCandles = async (isFirstLoad = false) => {
+    if (isFirstLoad) setLoading(true); // Chỉ hiện xoay xoay ở lần đầu tiên
     try {
       const res = await axiosClient.get(`/stocks/candles/${stockSymbol}`);
       

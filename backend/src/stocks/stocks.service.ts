@@ -136,6 +136,18 @@ export class StocksService implements OnModuleInit {
     }));
   }
 
+  // LẤY NẾN (CHO AI)
+  async getRecentCandles(symbol: string, limit: number = 10) {
+    const candles = await this.stockCandleRepository.find({
+      where: { symbol },
+      order: { startTime: 'DESC' },
+      take: limit,
+    });
+
+    // Trả về mảng nến thô (cũ -> mới)
+    return candles.reverse();
+  }
+
   private async persistData() {
     try {
       // 1. Update giá mới nhất vào bảng Stock (để restart ko bị mất giá)

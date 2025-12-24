@@ -14,6 +14,7 @@ import { BotModule } from './bot/bot.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AdminModule } from './admin/admin.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     AlertsModule,
     BotModule,
     AdminModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService, EventsGateway],
