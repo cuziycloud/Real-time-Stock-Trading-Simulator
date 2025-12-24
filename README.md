@@ -6,6 +6,7 @@ Một nền tảng giả lập giao dịch chứng khoán thời gian thực, t�
 ## ✨ Tính Năng Nổi Bật (Key Features)
 
 - **Real-time Market:** Giá cổ phiếu biến động từng giây sử dụng công nghệ **WebSockets**.
+- **AI Market Assistant:** Trợ lý tài chính tích hợp **GenAI (Llama 3)** giúp phân tích danh mục đầu tư và tư vấn chiến lược dựa trên dữ liệu hệ thống (giả lập).
 - **Bot Trading System:** Hệ thống Bot tự động đặt lệnh Mua/Bán tạo thanh khoản cho thị trường (NPC Traders).
 - **Matching Engine:** Cơ chế khớp lệnh **Limit Order** (Lệnh chờ) tự động khi giá thị trường chạm ngưỡng.
 - **Banking System:** 
@@ -19,11 +20,11 @@ Một nền tảng giả lập giao dịch chứng khoán thời gian thực, t�
 
 | Lĩnh vực | Công nghệ |
 | :--- | :--- |
-| **Backend** | NestJS, TypeORM, Socket.io, RxJS |
 | **Frontend** | React (Vite), Ant Design, Recharts, Axios Interceptor |
+| **Backend** | NestJS, TypeORM, Socket.io, RxJS, Groq SDK (AI) |
 | **Database** | MySQL 8.0 |
 | **DevOps** | Docker, Docker Compose, Nginx |
-| **Tools** | Postman, VNPAY Sandbox, Telegram API |
+| **Integration**| VNPAY Sandbox, Telegram Bot API, Groq Cloud (AI) |
 
 ## ⚙️ Cài Đặt & Chạy Dự Án (Installation)
 
